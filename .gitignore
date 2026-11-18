@@ -1,0 +1,7 @@
+/target
+# Never commit real family trees: they hold personal data about living people.
+*.ged
+*.GED
+*.ged.tmp
+!crates/gedcom/tests/fixtures/*.ged
+.DS_Store

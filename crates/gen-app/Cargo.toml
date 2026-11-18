@@ -1,0 +1,20 @@
+[package]
+name = "gen-app"
+description = "Fast desktop explorer and editor for GEDCOM family trees"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "gen"
+path = "src/main.rs"
+
+[dependencies]
+gedcom.workspace = true
+anyhow.workspace = true
+gpui.workspace = true
+gpui_platform.workspace = true
+gpui-component.workspace = true
+gpui-component-assets.workspace = true

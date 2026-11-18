@@ -1,0 +1,14 @@
+[package]
+name = "gen-gedcom"
+description = "Lossless GEDCOM 5.5/5.5.1/7 reader, editor and writer"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "gedcom"
+
+[dependencies]
+thiserror.workspace = true

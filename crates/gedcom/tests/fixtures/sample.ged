@@ -1,0 +1,51 @@
+0 HEAD
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 SOUR TEST
+0 @I1@ INDI
+1 NAME José /García/
+2 GIVN José
+2 SURN García
+1 SEX M
+1 BIRT
+2 DATE ABT 1920
+2 PLAC Sevilla, España
+1 DEAT
+2 DATE 3 MAR 1990
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Carmen /López/
+1 SEX F
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Ana María /García López/
+1 SEX F
+1 BIRT
+2 DATE 12 JUN 1950
+2 PLAC Madrid
+1 _UID KEEPME
+1 NOTE Una nota larga que
+2 CONC  continúa aquí.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Luis /García López/
+1 SEX M
+1 FAMC @F1@
+0 @I5@ INDI
+1 NAME Pablo /Ruiz García/
+1 SEX M
+1 FAMC @F2@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I3@
+1 CHIL @I4@
+1 MARR
+2 DATE 1945
+0 @F2@ FAM
+1 WIFE @I3@
+1 CHIL @I5@
+0 TRLR
