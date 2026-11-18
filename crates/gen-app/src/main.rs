@@ -1,4 +1,5 @@
 mod app;
+mod theme;
 
 use gpui::*;
 use gpui_component::Root;
