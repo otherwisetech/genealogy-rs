@@ -12,6 +12,7 @@ name = "gen"
 path = "src/main.rs"
 
 [dependencies]
+i18n.workspace = true
 gedcom.workspace = true
 anyhow.workspace = true
 gpui.workspace = true

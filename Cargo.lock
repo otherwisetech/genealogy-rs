@@ -2112,6 +2112,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "gen-gedcom",
+ "gen-i18n",
  "gpui",
  "gpui-component",
  "gpui-component-assets",
@@ -2122,8 +2123,13 @@ dependencies = [
 name = "gen-gedcom"
 version = "0.1.0"
 dependencies = [
+ "gen-i18n",
  "thiserror 2.0.20",
 ]
+
+[[package]]
+name = "gen-i18n"
+version = "0.1.0"
 
 [[package]]
 name = "generic-array"

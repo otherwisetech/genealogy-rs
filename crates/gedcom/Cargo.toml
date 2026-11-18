@@ -11,4 +11,5 @@ repository.workspace = true
 name = "gedcom"
 
 [dependencies]
+i18n.workspace = true
 thiserror.workspace = true

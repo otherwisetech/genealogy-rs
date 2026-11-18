@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["crates/gedcom", "crates/gen-app"]
-default-members = ["crates/gedcom"]
+members = ["crates/i18n", "crates/gedcom", "crates/gen-app"]
+default-members = ["crates/i18n", "crates/gedcom"]
 
 [workspace.package]
 version = "0.1.0"
@@ -12,6 +12,7 @@ repository = "https://github.com/otherwisetech/genealogy-rs"
 
 [workspace.dependencies]
 gedcom = { path = "crates/gedcom", package = "gen-gedcom" }
+i18n = { path = "crates/i18n", package = "gen-i18n" }
 anyhow = "1"
 thiserror = "2"
 # GPUI stack, same as the upstream gpui-component examples. Git deps move: Cargo.lock pins revs.
