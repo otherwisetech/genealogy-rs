@@ -42,38 +42,19 @@ impl Event {
     pub fn label(&self) -> String {
         let base = event_label(&self.tag);
         match &self.kind {
-            Some(t) => format!("{base} ({t})"),
-            None => base.to_string(),
+            Some(t) => i18n::t!("core.event.with_kind", label = base, kind = t),
+            None => base,
         }
     }
 }
 
-pub fn event_label(tag: &str) -> &str {
-    match tag {
-        "BIRT" => "Birth",
-        "CHR" => "Christening",
-        "BAPM" => "Baptism",
-        "DEAT" => "Death",
-        "BURI" => "Burial",
-        "CREM" => "Cremation",
-        "MARR" => "Marriage",
-        "DIV" => "Divorce",
-        "ENGA" => "Engagement",
-        "RESI" => "Residence",
-        "OCCU" => "Occupation",
-        "EDUC" => "Education",
-        "EMIG" => "Emigration",
-        "IMMI" => "Immigration",
-        "NATU" => "Naturalization",
-        "CENS" => "Census",
-        "RELI" => "Religion",
-        "TITL" => "Title",
-        "GRAD" => "Graduation",
-        "RETI" => "Retirement",
-        "EVEN" => "Event",
-        "FACT" => "Fact",
-        other => other,
-    }
+/// Localized name of an event/attribute tag; unknown tags are returned as-is.
+pub fn event_label(tag: &str) -> String {
+    const KNOWN: &[&str] = &[
+        "BIRT", "CHR", "BAPM", "DEAT", "BURI", "CREM", "MARR", "DIV", "ENGA", "RESI", "OCCU", "EDUC", "EMIG", "IMMI", "NATU", "CENS", "RELI", "TITL", "GRAD", "RETI", "EVEN", "FACT", "ADOP",
+        "BARM", "BASM", "BLES", "CHRA", "CONF", "FCOM", "ORDN", "PROB", "WILL", "NATI", "CAST", "DSCR", "IDNO", "NCHI", "NMR", "PROP", "SSN", "ANUL", "MARB", "MARC", "MARL", "MARS", "DIVF",
+    ];
+    if KNOWN.contains(&tag) { i18n::tr(&format!("core.event.{}", tag.to_lowercase()), &[]) } else { tag.to_string() }
 }
 
 const EVENT_TAGS: &[&str] = &[
@@ -114,7 +95,7 @@ impl Person {
     pub fn name(&self) -> String {
         let n = format!("{} {}", self.given, self.surname);
         let n = n.trim();
-        if n.is_empty() { "(unnamed)".into() } else { n.to_string() }
+        if n.is_empty() { i18n::t!("core.person.unnamed") } else { n.to_string() }
     }
 
     pub fn birth_year(&self) -> Option<i32> {
@@ -125,14 +106,14 @@ impl Person {
         self.death.as_ref().and_then(|e| e.date.as_deref()).and_then(year_of)
     }
 
-    /// "1901–1980", "b. 1901", "d. 1980", or "".
+    /// Localized "1901 – 1980", "n. 1901", "† 1980", or "".
     pub fn lifespan(&self) -> String {
         let dead = self.death.is_some();
         match (self.birth_year(), self.death_year()) {
-            (Some(b), Some(d)) => format!("{b}–{d}"),
-            (Some(b), None) if dead => format!("{b}–†"),
-            (Some(b), None) => format!("b. {b}"),
-            (None, Some(d)) => format!("d. {d}"),
+            (Some(b), Some(d)) => i18n::t!("core.lifespan.both", birth = b, death = d),
+            (Some(b), None) if dead => i18n::t!("core.lifespan.born_dead", birth = b),
+            (Some(b), None) => i18n::t!("core.lifespan.born", year = b),
+            (None, Some(d)) => i18n::t!("core.lifespan.died", year = d),
             (None, None) if dead => "†".into(),
             _ => String::new(),
         }
@@ -217,7 +198,7 @@ impl Tree {
         self.rec_ix.get(id).map(|&i| &self.records[i])
     }
 
-    fn record_mut(&mut self, id: &str) -> Result<&mut Node, EditError> {
+    pub(crate) fn record_mut(&mut self, id: &str) -> Result<&mut Node, EditError> {
         let i = *self.rec_ix.get(id).ok_or_else(|| EditError::NotFound(id.into()))?;
         Ok(&mut self.records[i])
     }
@@ -621,7 +602,9 @@ fn build_person(id: &str, r: &Node, notes: &HashMap<String, String>) -> Person {
     };
     let married: Vec<&str> = r.children_with("NAME").filter_map(|n| n.child_value("_MARNM")).collect();
     let places: Vec<&str> = p.events.iter().filter_map(|e| e.place.as_deref()).collect();
-    p.search_key = fold(&format!("{} {} {} {} {} {}", p.given, p.surname, married.join(" "), p.lifespan(), places.join(" "), id));
+    // years rather than the localized lifespan so the key doesn't depend on the UI language
+    let years = [p.birth_year(), p.death_year()].iter().flatten().map(i32::to_string).collect::<Vec<_>>().join(" ");
+    p.search_key = fold(&format!("{} {} {} {} {} {}", p.given, p.surname, married.join(" "), years, places.join(" "), id));
     p
 }
 

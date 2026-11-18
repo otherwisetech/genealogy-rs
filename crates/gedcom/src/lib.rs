@@ -29,3 +29,10 @@ pub fn save(tree: &Tree, path: &std::path::Path) -> std::io::Result<()> {
     std::fs::write(&tmp, tree.to_gedcom())?;
     std::fs::rename(&tmp, path)
 }
+
+/// Serializes tests that switch the global UI locale.
+#[cfg(test)]
+pub(crate) fn locale_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}

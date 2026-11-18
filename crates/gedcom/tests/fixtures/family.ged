@@ -1,0 +1,91 @@
+0 HEAD
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 SOUR TEST
+0 @I10@ INDI
+1 NAME Tomás /Ordóñez/
+1 SEX M
+1 BIRT
+2 DATE 4 FEB 1790
+2 PLAC Santafé de Bogotá
+2 SOUR @S1@
+1 OCCU Carpintero
+2 DATE 1815
+1 RESI
+2 DATE 1820
+2 PLAC Tunja
+1 DEAT
+2 DATE 1852
+2 PLAC Santafé de Bogotá
+1 BURI
+1 FAMC @F30@
+1 FAMS @F10@
+0 @I11@ INDI
+1 NAME Inés /Rubio/
+1 SEX F
+1 FAMS @F10@
+0 @I12@ INDI
+1 NAME Rosa /Ordóñez Rubio/
+1 SEX F
+1 BIRT
+2 DATE 1815
+1 FAMC @F10@
+1 FAMS @F11@
+0 @I13@ INDI
+1 NAME Mateo /Valdés/
+1 SEX M
+1 FAMS @F11@
+0 @I14@ INDI
+1 NAME Andrés /Ordóñez Rubio/
+1 SEX M
+1 FAMC @F10@
+1 FAMS @F12@
+0 @I15@ INDI
+1 NAME Clara /Pinto/
+1 SEX F
+1 FAMS @F12@
+0 @I20@ INDI
+1 NAME Simón /Valdés Ordóñez/
+1 SEX M
+1 BIRT
+2 DATE 1840
+1 FAMC @F11@
+0 @I21@ INDI
+1 NAME Cruz /Valdés Ordóñez/
+1 FAMC @F11@
+0 @I22@ INDI
+1 NAME Lucía /Ordóñez Pinto/
+1 SEX F
+1 FAMC @F12@
+0 @I30@ INDI
+1 NAME Gaspar /Ordóñez/
+1 SEX M
+1 FAMS @F30@
+0 @I99@ INDI
+1 NAME Nadie /Aparte/
+1 SEX U
+0 @F10@ FAM
+1 HUSB @I10@
+1 WIFE @I11@
+1 CHIL @I12@
+1 CHIL @I14@
+1 MARR
+2 DATE 1812
+2 PLAC Santafé de Bogotá
+0 @F11@ FAM
+1 HUSB @I13@
+1 WIFE @I12@
+1 CHIL @I20@
+1 CHIL @I21@
+0 @F12@ FAM
+1 HUSB @I14@
+1 WIFE @I15@
+1 CHIL @I22@
+0 @F30@ FAM
+1 HUSB @I30@
+1 CHIL @I10@
+0 @S1@ SOUR
+1 TITL Registro parroquial
+0 TRLR
