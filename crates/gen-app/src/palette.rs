@@ -121,7 +121,7 @@ pub struct Palette {
     filter: SearchFilter,
     results: PaletteResults,
     selected: usize,
-    placeholder_locale: &'static str,
+    synced_locale: &'static str,
     _subs: Vec<Subscription>,
 }
 
@@ -143,7 +143,7 @@ impl Palette {
             filter: SearchFilter::All,
             results: PaletteResults::default(),
             selected: 0,
-            placeholder_locale: "",
+            synced_locale: "",
             _subs: subs,
         };
         palette.refresh(cx);
@@ -208,12 +208,19 @@ impl Palette {
         }
     }
 
-    fn sync_placeholder(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    /// The placeholder and the result subtitles are stored text: rebuilt when the language changes.
+    fn sync_locale(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let locale = i18n::locale();
-        if self.placeholder_locale != locale {
-            self.placeholder_locale = locale;
+        if self.synced_locale != locale {
+            let first = self.synced_locale.is_empty();
+            self.synced_locale = locale;
             let text = i18n::t!("dialogs.palette.placeholder");
             self.input.update(cx, |s, cx| s.set_placeholder(text, window, cx));
+            if !first {
+                let selected = self.selected;
+                self.refresh(cx);
+                self.selected = selected;
+            }
         }
     }
 
@@ -348,7 +355,7 @@ fn kbd(text: String, t: &Tokens) -> Div {
 
 impl Render for Palette {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.sync_placeholder(window, cx);
+        self.sync_locale(window, cx);
         let t = theme::tokens(cx);
         let footer = h_flex()
             .gap_3()

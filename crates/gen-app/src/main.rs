@@ -18,6 +18,13 @@ use std::path::PathBuf;
 
 actions!(genealogy, [Quit]);
 
+pub(crate) const APP_NAME: &str = "gen"; // i18n-ok: product name
+
+/// The native menu bar holds plain strings, so it is rebuilt on every language switch.
+pub(crate) fn set_app_menus(cx: &mut App) {
+    cx.set_menus(vec![Menu { name: APP_NAME.into(), items: vec![MenuItem::action(i18n::t!("app.menu.quit"), Quit)], disabled: false }]);
+}
+
 const FONTS: [&[u8]; 4] = [
     include_bytes!("../assets/fonts/Inter-Regular.ttf"),
     include_bytes!("../assets/fonts/Inter-Medium.ttf"),
@@ -44,11 +51,12 @@ fn main() {
         palette::bind_keys(cx);
         cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
         cx.on_action(|_: &Quit, cx| cx.quit());
-        cx.set_menus(vec![Menu { name: "gen".into(), items: vec![MenuItem::action(i18n::t!("app.menu.quit"), Quit)], disabled: false }]);
+        gpui_component::set_locale(i18n::locale());
+        set_app_menus(cx);
         cx.on_window_closed(|cx, _| cx.quit()).detach();
         let window_options = WindowOptions {
             window_bounds: Some(WindowBounds::centered(size(px(1440.), px(900.)), cx)),
-            titlebar: Some(TitlebarOptions { title: Some("gen".into()), ..Default::default() }),
+            titlebar: Some(TitlebarOptions { title: Some(APP_NAME.into()), ..Default::default() }),
             ..Default::default()
         };
         let initial = initial.clone();

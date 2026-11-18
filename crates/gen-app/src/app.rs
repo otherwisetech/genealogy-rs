@@ -224,7 +224,7 @@ impl GenApp {
                         this.update_title(window);
                     }
                     Ok(Err(e)) => this.toast("app.toast.invalid_file", e.to_string(), cx),
-                    Err(e) => this.toast("app.toast.read_failed", format!("{}: {e}", path.display()), cx),
+                    Err(e) => this.toast("app.toast.read_failed", format!("{}: {}", path.display(), io_error(&e)), cx),
                 }
                 cx.notify();
             })
@@ -248,7 +248,7 @@ impl GenApp {
 
     fn window_title(&self) -> String {
         let name = self.path.as_deref().and_then(Path::file_name).map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| self.tree.title());
-        format!("{name}{} — gen", if self.dirty { " •" } else { "" })
+        format!("{name}{} — {}", if self.dirty { " •" } else { "" }, crate::APP_NAME)
     }
 
     fn update_title(&self, window: &mut Window) {
@@ -322,7 +322,7 @@ impl GenApp {
                 self.update_title(window);
                 self.toast("app.toast.saved", name, cx);
             }
-            Err(e) => self.toast("app.toast.save_failed", e.to_string(), cx),
+            Err(e) => self.toast("app.toast.save_failed", io_error(&e), cx),
         }
         cx.notify();
     }
@@ -776,10 +776,21 @@ impl GenApp {
     pub(crate) fn set_language(&mut self, code: &'static str, window: &mut Window, cx: &mut Context<Self>) {
         if i18n::set_locale(code) {
             Settings { language: Some(code.to_string()) }.save();
+            gpui_component::set_locale(code);
+            crate::set_app_menus(cx);
             self.rev += 1;
             self.update_title(window);
             cx.refresh_windows();
         }
+    }
+}
+
+/// OS error text is in the system language, so the common cases get our own wording.
+fn io_error(e: &std::io::Error) -> String {
+    match e.kind() {
+        std::io::ErrorKind::NotFound => i18n::t!("app.error.not_found"),
+        std::io::ErrorKind::PermissionDenied => i18n::t!("app.error.permission_denied"),
+        _ => e.to_string(),
     }
 }
 

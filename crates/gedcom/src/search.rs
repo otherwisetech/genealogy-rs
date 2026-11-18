@@ -203,7 +203,7 @@ pub fn palette_search(tree: &Tree, query: &str, filter: SearchFilter, focus: Opt
                 let mut sub = p.lifespan();
                 let rel = match (focus, &focus_name) {
                     (Some(f), _) if f == id => tree.relationship(f, id),
-                    (Some(f), Some(n)) => tree.relationship(f, id).map(|r| i18n::t!("core.palette.relation", rel = r, name = n)),
+                    (Some(f), Some(n)) => tree.relationship(f, id).map(|r| i18n::tv!("core.palette.relation", n, rel = r, name = n)),
                     _ => None,
                 };
                 if let Some(r) = rel {

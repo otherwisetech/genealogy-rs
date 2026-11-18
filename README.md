@@ -7,7 +7,7 @@ A fast desktop app to **explore and edit GEDCOM family trees**, written in Rust 
 - Instant accent-insensitive search by name, married name, year, place or id.
 - Pan/zoom pedigree and descendants canvas (3–6 generations), ancestor fan, full list, ⌘K search.
 - Edit names, sex, birth/death, notes in a dialog; add father/mother/partner/son/daughter; delete.
-- Spanish and English UI (switch from the globe menu; remembered across runs).
+- Spanish, English, Portuguese and French UI (switch from the globe menu; remembered across runs).
 - Undo/redo, and **lossless saving**: every tag the app does not understand (vendor `_UID`, `_UPD`,
   sources, media, …) is written back untouched.
 
@@ -37,6 +37,7 @@ The first build compiles GPUI from git and takes a while.
 ## Layout
 
 ```
+crates/i18n      translation catalogs (gen-i18n), embedded at build time
 crates/gedcom    library (gen-gedcom): lossless parser/writer, family-tree model, edits, search — no UI
 crates/gen-app   the `gen` desktop binary (GPUI)
 ```
@@ -61,13 +62,27 @@ a generic line tree and builds the family view on top of it.
 ## Develop
 
 ```sh
-cargo test -p gen-gedcom
+cargo test -p gen-i18n -p gen-gedcom -p gen-app
 cargo build -p gen-app
 cargo clippy --workspace
 ```
 
 Test fixtures are synthetic. **Do not commit real family trees** — `.gitignore` blocks `*.ged`
 outside `crates/gedcom/tests/fixtures/`.
+
+## Translations
+
+Every UI string lives in `crates/i18n/locales/<lang>/*.ftl` (`key = text`, `{name}` placeholders,
+`.one`/`.other` plural forms, `.vowel` forms for languages that elide before a vowel). To add a
+language:
+
+1. Copy a locale folder, e.g. `cp -r crates/i18n/locales/en crates/i18n/locales/de`.
+2. Translate every value in every file (keep keys and `{placeholders}` as they are), including
+   `common.language_name` — the name shown in the language menu.
+3. Run `cargo test -p gen-i18n`: it fails on missing/extra keys, mismatched placeholders, keys
+   used in code but missing from the catalog, catalog keys no code uses, and hard-coded UI text.
+
+The language is picked from the system locale on first run and switched from the globe menu.
 
 ## License
 

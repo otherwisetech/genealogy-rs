@@ -96,3 +96,6 @@ app.toast.edit_failed = No se pudo aplicar el cambio: {arg}
 app.toast.undone = Deshecho
 app.toast.redone = Rehecho
 app.toast.deleted = Persona eliminada (⌘Z para deshacer)
+
+app.error.not_found = el archivo no existe
+app.error.permission_denied = permiso denegado

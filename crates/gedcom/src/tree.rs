@@ -157,7 +157,7 @@ pub struct Tree {
 
 #[derive(Debug, thiserror::Error)]
 pub enum EditError {
-    #[error("no record {0}")]
+    #[error("{}", i18n::t!("core.error.no_record", id = .0))]
     NotFound(String),
 }
 

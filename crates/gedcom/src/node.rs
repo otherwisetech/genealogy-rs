@@ -78,8 +78,12 @@ impl Node {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
-    #[error("line {line}: {msg}")]
-    Syntax { line: usize, msg: String },
+    #[error("{}", i18n::t!("core.error.bad_level", line = .line, text = .text))]
+    BadLevel { line: usize, text: String },
+    #[error("{}", i18n::t!("core.error.missing_tag", line = .line))]
+    MissingTag { line: usize },
+    #[error("{}", i18n::t!("core.error.orphan_line", line = .line, level = .level))]
+    OrphanLine { line: usize, level: usize },
 }
 
 /// Source formatting we reproduce on write.
@@ -130,7 +134,7 @@ pub fn parse(text: &str) -> Result<(Vec<Node>, Format), ParseError> {
                     n.value.push_str(line);
                     continue;
                 }
-                None => return Err(ParseError::Syntax { line: lineno, msg: format!("bad level {level_s:?}") }),
+                None => return Err(ParseError::BadLevel { line: lineno, text: level_s.to_string() }),
             }
         };
         let (xref, rest) = if rest.starts_with('@') {
@@ -148,7 +152,7 @@ pub fn parse(text: &str) -> Result<(Vec<Node>, Format), ParseError> {
             None => (rest, ""),
         };
         if tag.is_empty() {
-            return Err(ParseError::Syntax { line: lineno, msg: "missing tag".into() });
+            return Err(ParseError::MissingTag { line: lineno });
         }
         if (tag == "CONC" || tag == "CONT") && level > 0 {
             if let Some((pl, parent)) = stack.last_mut() {
@@ -166,7 +170,7 @@ pub fn parse(text: &str) -> Result<(Vec<Node>, Format), ParseError> {
         } else {
             pop_to(&mut stack, &mut roots, level);
             if stack.is_empty() {
-                return Err(ParseError::Syntax { line: lineno, msg: format!("level {level} line without a record") });
+                return Err(ParseError::OrphanLine { line: lineno, level });
             }
         }
         let node = Node { xref, tag: tag.to_string(), value: value.to_string(), children: vec![] };
@@ -303,5 +307,18 @@ mod tests {
     fn pointer_and_escaped_at() {
         assert_eq!(Node::new("FAMC", "@F1@").pointer(), Some("F1"));
         assert_eq!(Node::new("EMAIL", "a@@b.c").pointer(), None);
+    }
+
+    #[test]
+    fn errors_are_localized() {
+        let _l = crate::locale_lock();
+        assert!(matches!(parse("x INDI"), Err(ParseError::BadLevel { line: 1, .. })));
+        assert!(matches!(parse("0 HEAD\n1 \n"), Err(ParseError::MissingTag { line: 2 })));
+        let orphan = parse("1 NAME A").unwrap_err();
+        i18n::set_locale("en");
+        assert_eq!(orphan.to_string(), "line 1: level 1 line outside any record");
+        i18n::set_locale("fr");
+        assert_eq!(orphan.to_string(), "ligne 1 : ligne de niveau 1 hors de tout enregistrement");
+        i18n::set_locale("es");
     }
 }

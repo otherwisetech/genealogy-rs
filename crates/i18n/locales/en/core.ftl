@@ -76,6 +76,7 @@ core.list.pair = {a}, {b}
 core.list.last = {a} and {b}
 
 core.palette.relation = {rel} of {name}
+core.palette.relation.vowel = {rel} of {name}
 
 core.rel.self = person in focus
 core.rel.parent.m = father
@@ -129,3 +130,8 @@ core.rel.child_in_law.u = child-in-law
 core.rel.sibling_in_law.m = brother-in-law
 core.rel.sibling_in_law.f = sister-in-law
 core.rel.sibling_in_law.u = sibling-in-law
+
+core.error.bad_level = line {line}: invalid level "{text}"
+core.error.missing_tag = line {line}: missing tag
+core.error.orphan_line = line {line}: level {level} line outside any record
+core.error.no_record = no record {id}

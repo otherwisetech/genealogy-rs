@@ -11,7 +11,10 @@
 //! people.other = {n} personas
 //! ```
 //!
-//! Rule: every key must exist in every language (`tests::all_locales_have_the_same_keys`).
+//! `tv!` picks `key.vowel` before a vowel-initial word (fr «fils d'Anne»).
+//!
+//! Rule: every key must exist in every language (`tests::all_locales_have_the_same_keys`);
+//! `tests/guard.rs` checks that code and catalogs agree and that UI text isn't hard-coded.
 //! Lookup falls back to the default language, then to the key itself.
 use std::collections::HashMap;
 use std::sync::{OnceLock, RwLock};
@@ -20,21 +23,10 @@ include!(concat!(env!("OUT_DIR"), "/catalog.rs"));
 
 pub const DEFAULT: &str = "es";
 
-/// (code, native name) of every bundled language, sorted by code.
+/// (code, native name) of every bundled language, sorted by code. The name is the
+/// language's own `common.language_name`.
 pub fn available() -> Vec<(&'static str, &'static str)> {
-    CATALOG.iter().map(|(code, _)| (*code, native_name(code))).collect()
-}
-
-fn native_name(code: &str) -> &'static str {
-    match code {
-        "es" => "Español",
-        "en" => "English",
-        "pt" => "Português",
-        "fr" => "Français",
-        "de" => "Deutsch",
-        "it" => "Italiano",
-        _ => "?",
-    }
+    CATALOG.iter().map(|(code, _)| (*code, tables().get(code).and_then(|m| m.get("common.language_name")).copied().unwrap_or(code))).collect()
 }
 
 type Table = HashMap<&'static str, HashMap<&'static str, &'static str>>;
@@ -90,12 +82,37 @@ pub fn tr(key: &str, args: &[(&str, &dyn std::fmt::Display)]) -> String {
     s
 }
 
-/// Plural: looks up `key.one` when n == 1, else `key.other`; `{n}` is filled in.
+/// Whether `n` takes the singular form in the current language (French counts 0 as singular).
+fn is_one(n: i64) -> bool {
+    match locale() {
+        "fr" => n == 0 || n == 1,
+        _ => n == 1,
+    }
+}
+
+/// Plural: looks up `key.one` for a singular count, else `key.other`; `{n}` is filled in.
 pub fn tr_n(key: &str, n: i64, args: &[(&str, &dyn std::fmt::Display)]) -> String {
-    let k = format!("{key}.{}", if n == 1 { "one" } else { "other" });
+    let k = format!("{key}.{}", if is_one(n) { "one" } else { "other" });
     let mut all: Vec<(&str, &dyn std::fmt::Display)> = vec![("n", &n)];
     all.extend_from_slice(args);
     tr(&k, &all)
+}
+
+/// Like [`tr`], but uses `key.vowel` when `word` starts with a vowel sound, for languages that
+/// elide before it (fr «fils de Luc» / «fils d'Anne»). Every language defines both keys.
+pub fn tr_v(key: &str, word: &str, args: &[(&str, &dyn std::fmt::Display)]) -> String {
+    let vowel = word.trim_start().chars().next().is_some_and(|c| {
+        let c = c.to_lowercase().next().unwrap_or(c);
+        "aeiouyhàâäáéèêëíìîïóòôöúùûüÿæœ".contains(c)
+    });
+    if vowel { tr(&format!("{key}.vowel"), args) } else { tr(key, args) }
+}
+
+/// Every key of a bundled language, sorted (used by the guard tests).
+pub fn keys(lang: &str) -> Vec<&'static str> {
+    let mut v: Vec<_> = tables().get(lang).map(|m| m.keys().copied().collect()).unwrap_or_default();
+    v.sort_unstable();
+    v
 }
 
 /// `t!("key")`, `t!("key", name = value, …)`
@@ -103,6 +120,13 @@ pub fn tr_n(key: &str, n: i64, args: &[(&str, &dyn std::fmt::Display)]) -> Strin
 macro_rules! t {
     ($key:expr) => { $crate::tr($key, &[]) };
     ($key:expr, $($name:ident = $val:expr),+ $(,)?) => { $crate::tr($key, &[$((stringify!($name), &$val as &dyn ::std::fmt::Display)),+]) };
+}
+
+/// `tv!("key", word, name = value, …)` — see [`tr_v`].
+#[macro_export]
+macro_rules! tv {
+    ($key:expr, $word:expr) => { $crate::tr_v($key, &$word, &[]) };
+    ($key:expr, $word:expr, $($name:ident = $val:expr),+ $(,)?) => { $crate::tr_v($key, &$word, &[$((stringify!($name), &$val as &dyn ::std::fmt::Display)),+]) };
 }
 
 /// `tn!("key", count)`, `tn!("key", count, name = value, …)` — see [`tr_n`].
@@ -156,14 +180,23 @@ mod tests {
     fn lookup_args_plural_fallback() {
         // single test touches the global locale to avoid races between tests
         set_locale("es");
-        assert_eq!(t!("common.people", n = 3), "3 personas");
-        assert_eq!(tn!("common.people_n", 1), "1 persona");
-        assert_eq!(tn!("common.people_n", 2), "2 personas");
+        assert_eq!(t!("app.sheet.complete", n = 3), "Ficha completa al 3 %");
+        assert_eq!(tn!("app.topbar.people", 1), "1 persona");
+        assert_eq!(tn!("app.topbar.people", 0), "0 personas");
+        assert_eq!(tn!("app.topbar.people", 2), "2 personas");
+        assert_eq!(tv!("core.palette.relation", "Ana", rel = "padre", name = "Ana"), "padre de Ana");
+        assert!(set_locale("fr"));
+        assert_eq!(tn!("app.topbar.people", 0), "0 personne");
+        assert_eq!(tv!("core.palette.relation", "Anne", rel = "père", name = "Anne"), "père d'Anne");
+        assert_eq!(tv!("core.palette.relation", "Luc", rel = "père", name = "Luc"), "père de Luc");
         assert!(set_locale("en"));
-        assert_eq!(tn!("common.people_n", 1), "1 person");
+        assert_eq!(tn!("app.topbar.people", 1), "1 person");
         assert_eq!(t!("no.such.key"), "no.such.key");
         assert!(!set_locale("xx"));
         assert_eq!(match_system("en-US"), Some("en"));
+        assert_eq!(match_system("pt_BR"), Some("pt"));
+        let names: Vec<_> = available().into_iter().map(|(_, n)| n).collect();
+        assert_eq!(names, ["English", "Español", "Français", "Português"]);
         set_locale("es");
     }
 }

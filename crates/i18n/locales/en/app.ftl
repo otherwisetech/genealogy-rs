@@ -96,3 +96,6 @@ app.toast.edit_failed = Could not apply the change: {arg}
 app.toast.undone = Undone
 app.toast.redone = Redone
 app.toast.deleted = Person deleted (⌘Z to undo)
+
+app.error.not_found = the file does not exist
+app.error.permission_denied = permission denied

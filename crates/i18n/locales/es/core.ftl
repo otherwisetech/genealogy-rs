@@ -76,6 +76,7 @@ core.list.pair = {a}, {b}
 core.list.last = {a} y {b}
 
 core.palette.relation = {rel} de {name}
+core.palette.relation.vowel = {rel} de {name}
 
 core.rel.self = persona en foco
 core.rel.parent.m = padre
@@ -129,3 +130,8 @@ core.rel.child_in_law.u = yerno/nuera
 core.rel.sibling_in_law.m = cuñado
 core.rel.sibling_in_law.f = cuñada
 core.rel.sibling_in_law.u = cuñado/a
+
+core.error.bad_level = línea {line}: nivel no válido «{text}»
+core.error.missing_tag = línea {line}: falta la etiqueta
+core.error.orphan_line = línea {line}: línea de nivel {level} fuera de un registro
+core.error.no_record = no existe el registro {id}

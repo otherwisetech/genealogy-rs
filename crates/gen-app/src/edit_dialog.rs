@@ -85,7 +85,7 @@ pub struct EditDialog {
     precision_menu: Option<Slot>,
     suggest: Option<Suggest>,
     confirm_delete: bool,
-    placeholder_locale: &'static str,
+    synced_locale: &'static str,
     _subs: Vec<Subscription>,
 }
 
@@ -153,7 +153,7 @@ impl EditDialog {
             precision_menu: None,
             suggest: None,
             confirm_delete: false,
-            placeholder_locale: "",
+            synced_locale: "",
             _subs: subs,
         }
     }
@@ -239,12 +239,14 @@ impl EditDialog {
         }
     }
 
-    fn sync_placeholders(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+    /// Placeholders and event labels are stored text, so they are rebuilt when the language changes.
+    fn sync_locale(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let locale = i18n::locale();
-        if self.placeholder_locale == locale {
+        if self.synced_locale == locale {
             return;
         }
-        self.placeholder_locale = locale;
+        self.synced_locale = locale;
+        self.events = event_rows(&self.tree, &self.edit.id);
         let set = |st: &Entity<InputState>, key: &str, window: &mut Window, cx: &mut Context<Self>| {
             let text = i18n::tr(key, &[]);
             st.update(cx, |s, cx| s.set_placeholder(text, window, cx));
@@ -668,7 +670,7 @@ impl DateInputs {
 
 impl Render for EditDialog {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.sync_placeholders(window, cx);
+        self.sync_locale(window, cx);
         let t = theme::tokens(cx);
         let body = match self.tab {
             Tab::Data => self.render_data(&t, cx),
@@ -794,7 +796,10 @@ fn subtitle(tree: &Tree, id: &str, sex: Sex) -> String {
     let (f, m) = tree.father_mother(id);
     let parents: Vec<String> = [f, m].into_iter().flatten().map(display_name).collect();
     let relation = match parents.as_slice() {
-        [] => tree.unions(id).iter().find_map(|(_, p, _)| *p).map(|p| i18n::t!("dialogs.edit.partner_of", name = display_name(p))),
+        [] => tree.unions(id).iter().find_map(|(_, p, _)| *p).map(|p| {
+            let name = display_name(p);
+            i18n::tv!("dialogs.edit.partner_of", name, name = name)
+        }),
         [one] => Some(child_of(sex, one)),
         [a, b, ..] => Some(child_of(sex, &i18n::t!("dialogs.edit.and", a = a, b = b))),
     };
@@ -810,7 +815,7 @@ fn child_of(sex: Sex, parents: &str) -> String {
         Sex::Female => "dialogs.edit.daughter_of",
         Sex::Unknown => "dialogs.edit.child_of",
     };
-    i18n::tr(key, &[("parents", &parents)])
+    i18n::tr_v(key, parents, &[("parents", &parents)])
 }
 
 /// Move a selection by `delta` over `len` rows, wrapping; None selects the first/last row.
@@ -907,10 +912,14 @@ mod tests {
 
     #[test]
     fn subtitle_names_parents() {
-        let ged = "0 HEAD\n0 @I1@ INDI\n1 NAME Ana /Ruiz/\n1 SEX F\n1 FAMC @F1@\n0 @I2@ INDI\n1 NAME Luis /Ruiz/\n1 SEX M\n1 FAMS @F1@\n0 @I3@ INDI\n1 NAME Eva /Sol/\n0 @F1@ FAM\n1 HUSB @I2@\n1 CHIL @I1@\n0 TRLR\n";
+        let ged = "0 HEAD\n0 @I1@ INDI\n1 NAME Ana /Ruiz/\n1 SEX F\n1 FAMC @F1@\n0 @I2@ INDI\n1 NAME Luis /Ruiz/\n1 SEX M\n1 FAMS @F1@\n0 @I3@ INDI\n1 NAME Eva /Sol/\n0 @F1@ FAM\n1 HUSB @I2@\n1 CHIL @I1@\n0 @I4@ INDI\n1 NAME Juno /Sol/\n1 FAMC @F2@\n0 @F2@ FAM\n1 WIFE @I3@\n1 CHIL @I4@\n0 TRLR\n";
         let tree = Tree::parse(ged).unwrap();
         i18n::set_locale("es");
         assert_eq!(subtitle(&tree, "I1", Sex::Female), "I1 · hija de Luis Ruiz");
         assert_eq!(subtitle(&tree, "I3", Sex::Unknown), "I3");
+        i18n::set_locale("fr");
+        assert_eq!(subtitle(&tree, "I1", Sex::Female), "I1 · fille de Luis Ruiz");
+        assert_eq!(subtitle(&tree, "I4", Sex::Male), "I4 · fils d'Eva Sol");
+        i18n::set_locale("es");
     }
 }

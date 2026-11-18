@@ -373,6 +373,23 @@ mod tests {
         assert_eq!(rel("I20", "I21").as_deref(), Some("sibling"));
         assert_eq!(rel("I10", "I13").as_deref(), Some("son-in-law"));
         assert_eq!(f.timeline("I10")[1].label, "Marriage");
+
+        i18n::set_locale("pt");
+        assert_eq!(t.title(), "Família García");
+        assert_eq!(c.sentence(), "Faltam o local de falecimento, o cônjuge e as fontes.");
+        assert_eq!(Completeness { percent: 80, missing: vec![Missing::Sources] }.sentence(), "Falta as fontes.");
+        assert_eq!(rel("I20", "I11").as_deref(), Some("avó"));
+        assert_eq!(rel("I20", "I30").as_deref(), Some("bisavô"));
+        assert_eq!(rel("I10", "I13").as_deref(), Some("genro"));
+
+        i18n::set_locale("fr");
+        assert_eq!(t.title(), "Famille García");
+        assert_eq!(c.sentence(), "Il manque le lieu de décès, le conjoint et les sources.");
+        assert_eq!(rel("I20", "I11").as_deref(), Some("grand-mère"));
+        assert_eq!(rel("I20", "I30").as_deref(), Some("arrière-grand-père"));
+        assert_eq!(rel("I20", "I22").as_deref(), Some("cousine"));
+        assert_eq!(rel("I13", "I14").as_deref(), Some("beau-frère"));
+        assert_eq!(f.timeline("I10")[1].label, "Mariage");
         i18n::set_locale("es");
     }
 }
