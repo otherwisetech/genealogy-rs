@@ -1,28 +1,50 @@
 mod app;
 mod edit_dialog;
+mod fan;
+mod list;
 mod palette;
+mod pedigree;
+mod settings;
+mod sheet;
 mod theme;
+mod topbar;
+mod ui;
 
 use gpui::*;
 use gpui_component::Root;
 use gpui_component_assets::Assets;
+use std::borrow::Cow;
 use std::path::PathBuf;
 
 actions!(genealogy, [Quit]);
 
+const FONTS: [&[u8]; 4] = [
+    include_bytes!("../assets/fonts/Inter-Regular.ttf"),
+    include_bytes!("../assets/fonts/Inter-Medium.ttf"),
+    include_bytes!("../assets/fonts/Inter-SemiBold.ttf"),
+    include_bytes!("../assets/fonts/Fraunces72pt-SemiBold.ttf"),
+];
+
 fn main() {
+    i18n::set_locale(settings::initial_language(&settings::Settings::load()));
     let arg = std::env::args().nth(1);
     if matches!(arg.as_deref(), Some("-h" | "--help")) {
-        println!("usage: gen [FILE.ged]\n\nExplore and edit GEDCOM family trees.");
+        println!("{}", i18n::t!("app.cli.usage"));
         return;
     }
     let initial: Option<PathBuf> = arg.map(PathBuf::from);
     gpui_platform::application().with_assets(Assets).run(move |cx| {
+        if let Err(e) = cx.text_system().add_fonts(FONTS.iter().map(|f| Cow::Borrowed(*f)).collect()) {
+            eprintln!("fonts: {e}");
+        }
         gpui_component::init(cx);
+        app::sync_theme(None, cx);
         app::bind_keys(cx);
+        edit_dialog::bind_keys(cx);
+        palette::bind_keys(cx);
         cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
         cx.on_action(|_: &Quit, cx| cx.quit());
-        cx.set_menus(vec![Menu { name: "gen".into(), items: vec![MenuItem::action("Quit gen", Quit)], disabled: false }]);
+        cx.set_menus(vec![Menu { name: "gen".into(), items: vec![MenuItem::action(i18n::t!("app.menu.quit"), Quit)], disabled: false }]);
         cx.on_window_closed(|cx, _| cx.quit()).detach();
         let window_options = WindowOptions {
             window_bounds: Some(WindowBounds::centered(size(px(1440.), px(900.)), cx)),

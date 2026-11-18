@@ -5,8 +5,9 @@ A fast desktop app to **explore and edit GEDCOM family trees**, written in Rust 
 
 - Open any `.ged` export (MyHeritage, Ancestry, FamilySearch, Gramps, …) — thousands of people load in milliseconds.
 - Instant accent-insensitive search by name, married name, year, place or id.
-- Click through parents, siblings, partners and children; 3–5 generation pedigree.
-- Edit names, sex, birth/death, notes; add father/mother/partner/son/daughter; unlink or delete.
+- Pan/zoom pedigree and descendants canvas (3–6 generations), ancestor fan, full list, ⌘K search.
+- Edit names, sex, birth/death, notes in a dialog; add father/mother/partner/son/daughter; delete.
+- Spanish and English UI (switch from the globe menu; remembered across runs).
 - Undo/redo, and **lossless saving**: every tag the app does not understand (vendor `_UID`, `_UPD`,
   sources, media, …) is written back untouched.
 
@@ -23,11 +24,15 @@ The first build compiles GPUI from git and takes a while.
 
 | Key | Action |
 | --- | --- |
-| ⌘O / ⌘S / ⌘⇧S / ⌘N | open / save / save as / new tree |
-| ⌘F or ⌘K | search; Enter jumps to the first match |
-| ⌘[ | back to the previously viewed person |
+| ⌘O / ⌘S / ⌘⇧S / ⌘N | open / save / export (save as) / new tree |
+| ⌘K or ⌘F | search palette (↵ focus, ⌘↵ edit) |
+| ← → ↑ ↓ | move between relatives on the tree (see docs/DESIGN.md) |
+| F | center the focus person |
+| ↵ or ⌘↵, double-click | edit the focus person |
+| ⌘[ or ⌫ | back to the previously focused person |
+| drag, wheel / ⌘+wheel, pinch | pan / zoom (25–200 %) |
+| ⌘= / ⌘− / ⌘0 / ⌘9 | zoom in / out / 100 % / fit |
 | ⌘Z / ⌘⇧Z | undo / redo (outside text fields) |
-| Enter in a field | apply edits |
 
 ## Layout
 

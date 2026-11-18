@@ -72,8 +72,15 @@ avatar "?") · Empty slot («+ Añadir madre», dashed; hover → accent).
 - Click a card → focus; tree re-lays-out and recenters, ease-out 200 ms.
 - Double-click or ⌘↵ → edit dialog.
 - Hover ≥300 ms → quick actions (+ padre, + pareja, + hijo).
-- Arrows ←→↑↓ move between relatives; F centers the focus.
-- Changing focus updates the breadcrumb (history, ← to go back).
+- Arrows move between relatives (canvas focused):
+  - Pedigrí: → father (mother if no father) · ← back to the child you came from (else the first
+    child) · ↑/↓ switch between the two parents of that child; otherwise previous/next sibling.
+  - Descendientes: → first child · ← a parent · ↑/↓ previous/next sibling.
+- F centers the focus; ⌘= / ⌘− / ⌘0 zoom in / out / 100 %; ⌘9 fits the whole tree.
+- Changing focus updates the breadcrumb (history; ⌘[ or ⌫ goes back, a crumb click jumps there).
+- The recenter after a click waits ~250 ms so a double-click still lands on the same card.
+- Quick actions show «+ padre» (or «+ madre» if only the father is known, nothing if both are),
+  «+ pareja», «+ hijo»; they create the relative and open the dialog, the focus stays put.
 
 ## Artboard 1 — Tree (pedigree) + ficha
 
@@ -127,3 +134,12 @@ Sections:
 - «Lugares · 1»: pin icon, «Santafé de Bogotá», «14 eventos de la familia Ordóñez».
 - «Acciones»: «+ Crear persona «ordóñez»» with ⌘N hint.
 Footer: «↑↓ moverse · ↵ centrar en el árbol · ⌘↵ editar».
+
+Keys (context `Palette`, bound by `palette::bind_keys`): ↑↓ move one selection across all rows
+(people, places, actions; wraps) · ↵ focus person / place / create · ⌘↵ edit the selected person ·
+⌘N create «query» · Tab / ⇧Tab cycle the filter chips · ⌘1–⌘5 pick a chip directly · esc or backdrop
+click dismiss. Hovering a row selects it; clicking activates it (⌘-click = edit).
+
+Edit dialog keys (context `EditDialog`, `edit_dialog::bind_keys`): ⌘↵ saves from any field (the note
+included) · esc closes an open place/precision dropdown first, then cancels · ↑↓/↵ drive the place
+autocomplete.

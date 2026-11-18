@@ -104,7 +104,8 @@ pub fn tokens(cx: &App) -> Tokens {
     if cx.theme().mode.is_dark() { Tokens::dark() } else { Tokens::light() }
 }
 
-pub const SERIF: &str = "Fraunces";
+/// typographic family of the bundled Fraunces 72pt instance
+pub const SERIF: &str = "Fraunces 72pt";
 pub const SANS: &str = "Inter";
 
 pub mod size {
@@ -124,6 +125,24 @@ pub mod size {
     pub const TOPBAR_H: Pixels = px(56.);
     pub const CONTROL_H: Pixels = px(36.);
     pub const DOT_SPACING: f32 = 20.;
+    pub const DIALOG_W: Pixels = px(560.);
+    pub const PALETTE_W: Pixels = px(560.);
+    pub const DIALOG_RADIUS: Pixels = px(16.);
+    pub const FIELD_H: Pixels = px(32.);
+}
+
+impl Tokens {
+    /// dimmed layer behind dialogs and the palette
+    pub fn backdrop(&self) -> Hsla {
+        let mut h = c(0x1C1B19);
+        h.a = if self.dark { 0.55 } else { 0.32 };
+        h
+    }
+
+    /// text on accent/ink filled controls
+    pub fn on_fill(&self) -> Hsla {
+        if self.dark { c(0x141413) } else { c(0xFFFFFF) }
+    }
 }
 
 /// Initials for an avatar: first letter of the given name and of the surname, "?" if none.
