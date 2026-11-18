@@ -2,12 +2,18 @@
 //!
 //! [`node`] is the raw line tree (keeps every tag, vendor extensions included); [`Tree`] is the
 //! family-tree view and edit API over it; [`search`] is accent-insensitive person search.
+pub mod date;
+pub mod edit;
+pub mod insights;
 pub mod node;
 pub mod search;
 pub mod tree;
 
 pub use node::{Node, ParseError};
-pub use search::{fold, search};
+pub use date::{DateValue, Precision, normalize_date};
+pub use edit::{EventEdit, PersonEdit};
+pub use insights::{Completeness, Missing, TimelineItem};
+pub use search::{PaletteResults, PersonHit, PlaceHit, SearchFilter, fold, palette_search, search};
 pub use tree::{EditError, Event, Family, Person, Sex, Tree, year_of};
 
 /// Read a GEDCOM file. UTF-8 (with or without BOM) is expected; invalid bytes are replaced

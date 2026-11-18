@@ -72,3 +72,57 @@ mod tests {
         assert_eq!(search(&t, "").len(), 5);
     }
 }
+
+// ---- ⌘K palette search. CONTRACT STUB — the core agent implements and tests. ----
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SearchFilter {
+    #[default]
+    All,
+    People,
+    Places,
+    /// people with no birth and no death date
+    NoDates,
+    /// people with no parents
+    NoParents,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PersonHit {
+    pub id: String,
+    /// display name ("Given Surname")
+    pub name: String,
+    /// byte ranges in `name` to highlight
+    pub name_hl: Vec<std::ops::Range<usize>>,
+    /// «1758 – 1821 · padre de Ramona»
+    pub sub: String,
+    pub sub_hl: Vec<std::ops::Range<usize>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlaceHit {
+    pub place: String,
+    pub hl: Vec<std::ops::Range<usize>>,
+    /// number of events at this place
+    pub events: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct PaletteResults {
+    pub people: Vec<PersonHit>,
+    pub places: Vec<PlaceHit>,
+}
+
+/// Ranked results for the palette. `focus` drives the relationship text in `sub`.
+pub fn palette_search(tree: &Tree, query: &str, filter: SearchFilter, focus: Option<&str>, limit: usize) -> PaletteResults {
+    let _ = (filter, focus);
+    let people = search(tree, query)
+        .into_iter()
+        .take(limit)
+        .map(|id| {
+            let p = &tree.people[id];
+            PersonHit { id: id.to_string(), name: p.name(), name_hl: vec![], sub: p.lifespan(), sub_hl: vec![] }
+        })
+        .collect();
+    PaletteResults { people, places: vec![] }
+}

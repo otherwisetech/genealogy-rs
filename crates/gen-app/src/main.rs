@@ -1,4 +1,6 @@
 mod app;
+mod edit_dialog;
+mod palette;
 mod theme;
 
 use gpui::*;
