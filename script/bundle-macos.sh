@@ -27,8 +27,11 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$version</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>NSHighResolutionCapable</key><true/>
-  </dict></array>
 </dict>
 </plist>
 PLIST
+plutil -lint -s "$app/Contents/Info.plist"
+# Make LaunchServices pick up the (possibly changed) icon.
+touch "$app"
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$app" || true
 echo "$app"

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3A7F5E"/>
+      <stop offset="1" stop-color="#245740"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g transform="translate(512 512) scale(1.2) translate(-512 -512)">
+  <g transform="translate(16 0)" fill="none" stroke="#E3EAE4" stroke-width="26" stroke-linecap="round">
+    <path d="M378 512 C425 512 425 352 472 352"/>
+    <path d="M378 512 C425 512 425 672 472 672"/>
+    <path d="M588 352 C639 352 639 272 690 272"/>
+    <path d="M588 352 C639 352 639 432 690 432"/>
+    <path d="M588 672 C639 672 639 592 690 592"/>
+    <path d="M588 672 C639 672 639 752 690 752"/>
+  </g>
+  <g transform="translate(16 0)" fill="#F6F3EC">
+    <circle cx="300" cy="512" r="78"/>
+    <circle cx="530" cy="352" r="58"/>
+    <circle cx="530" cy="672" r="58"/>
+    <g fill="#CFDDD3">
+      <circle cx="730" cy="272" r="40"/>
+      <circle cx="730" cy="432" r="40"/>
+      <circle cx="730" cy="592" r="40"/>
+      <circle cx="730" cy="752" r="40"/>
+    </g>
+  </g>
+  </g>
+</svg>
