@@ -24,13 +24,21 @@ use gpui_component_assets::Assets;
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-actions!(genealogy, [Quit]);
+actions!(genealogy, [Quit, OpenDeveloperSite]);
 
 pub(crate) const APP_NAME: &str = "genealogy-rs"; // i18n-ok: product name
+const DEVELOPER: &str = "Otherwise Technologies LLC"; // i18n-ok: company name
+pub(crate) const DEVELOPER_URL: &str = "https://otherwisetech.com";
+
+/// «Developed by Otherwise Technologies LLC · Wyoming, USA» in the current language.
+pub(crate) fn developer_credit() -> String {
+    i18n::t!("app.credit", company = DEVELOPER)
+}
 
 /// The native menu bar holds plain strings, so it is rebuilt on every language switch.
 pub(crate) fn set_app_menus(cx: &mut App) {
-    cx.set_menus(vec![Menu { name: APP_NAME.into(), items: vec![MenuItem::action(i18n::t!("app.menu.quit"), Quit)], disabled: false }]);
+    let items = vec![MenuItem::action(developer_credit(), OpenDeveloperSite), MenuItem::separator(), MenuItem::action(i18n::t!("app.menu.quit"), Quit)];
+    cx.set_menus(vec![Menu { name: APP_NAME.into(), items, disabled: false }]);
 }
 
 /// gpui-component's icon set plus our own `icons/*.svg`.
@@ -103,6 +111,7 @@ fn main() {
         kinship_dialog::bind_keys(cx);
         cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
         cx.on_action(|_: &Quit, cx| cx.quit());
+        cx.on_action(|_: &OpenDeveloperSite, cx| cx.open_url(DEVELOPER_URL));
         gpui_component::set_locale(i18n::locale());
         set_app_menus(cx);
         cx.on_window_closed(|cx, _| cx.quit()).detach();
