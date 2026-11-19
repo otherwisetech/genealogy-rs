@@ -139,6 +139,9 @@ pub struct GenApp {
     pub(crate) notes_expanded: bool,
     guard: Option<&'static str>,
     toast: Option<Toast>,
+    /// a newer release found on startup; cleared when dismissed
+    update: Option<crate::update::Release>,
+    pub(crate) update_check: bool,
     pub(crate) list_scroll: UniformListScrollHandle,
     pub(crate) sheet_scroll: ScrollHandle,
     pub(crate) map: crate::map::MapState,
@@ -192,6 +195,8 @@ impl GenApp {
             notes_expanded: false,
             guard: None,
             toast: None,
+            update: None,
+            update_check: settings.update_check,
             list_scroll: UniformListScrollHandle::new(),
             sheet_scroll: ScrollHandle::new(),
             map: crate::map::MapState::new(&settings),
@@ -203,7 +208,84 @@ impl GenApp {
         if let Some(p) = initial {
             this.load(p, window, cx);
         }
+        this.check_updates(cx);
         this
+    }
+
+    // ---- update check ----
+
+    fn check_updates(&mut self, cx: &mut Context<Self>) {
+        if !self.update_check || !crate::update::due(Settings::load().last_update_check, crate::update::now_secs()) {
+            return;
+        }
+        let task = cx.background_executor().spawn(async { crate::update::fetch_newer() });
+        cx.spawn(async move |this, cx| {
+            let res = task.await;
+            // a transport error (offline) is retried next launch; any HTTP answer counts as a check
+            if !matches!(res, Err(crate::map::net::NetError::Transport(_))) {
+                let mut s = Settings::load();
+                s.last_update_check = Some(crate::update::now_secs());
+                s.save();
+            }
+            match res {
+                Ok(Some(release)) => {
+                    this.update(cx, |this, cx| {
+                        this.update = Some(release);
+                        cx.notify();
+                    })
+                    .ok();
+                }
+                Ok(None) => {}
+                Err(e) => eprintln!("update check: {e}"), // i18n-ok: log only
+            }
+        })
+        .detach();
+    }
+
+    pub(crate) fn set_update_check(&mut self, on: bool, cx: &mut Context<Self>) {
+        self.update_check = on;
+        let mut s = Settings::load();
+        s.update_check = on;
+        s.save();
+        if on {
+            self.check_updates(cx);
+        } else {
+            self.update = None;
+        }
+        cx.notify();
+    }
+
+    fn render_update_notice(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
+        let release = self.update.as_ref()?;
+        let t = tokens(cx);
+        let url = release.url.clone();
+        Some(
+            div().absolute().top(px(68.)).left_0().right_0().flex().justify_center().child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(12.))
+                    .pl(px(16.))
+                    .pr(px(8.))
+                    .py(px(6.))
+                    .rounded(px(12.))
+                    .bg(t.surface)
+                    .border_1()
+                    .border_color(t.border)
+                    .shadow_md()
+                    .text_size(px(13.))
+                    .child(i18n::t!("app.update.available", version = release.tag.as_str()))
+                    .child(crate::ui::filled_button(&t, "update-open", t.accent).h(px(30.)).child(i18n::t!("app.update.download")).on_click(move |_, _, cx| cx.open_url(&url)))
+                    .child(
+                        crate::ui::icon_button(&t, "update-dismiss", gpui_component::IconName::Close, true)
+                            .tooltip(|w, cx| gpui_component::tooltip::Tooltip::new(i18n::t!("app.update.dismiss")).build(w, cx))
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.update = None;
+                                cx.notify();
+                            })),
+                    ),
+            ),
+        )
     }
 
     // ---- notices ----
@@ -1048,6 +1130,7 @@ impl Render for GenApp {
             .child(self.render_topbar(window, cx))
             .child(div().flex().flex_row().flex_1().min_h_0().child(div().flex_1().min_w_0().h_full().child(main)).when_some(self.review.clone(), |d, r| d.child(r)).child(self.render_sheet(window, cx)))
             .children(toast)
+            .children(self.render_update_notice(cx))
             .when_some(self.palette.clone(), |d, p| d.child(p))
             .when_some(self.edit_dialog.clone(), |d, e| d.child(e))
             .when_some(self.merge_dialog.clone(), |d, m| d.child(m))

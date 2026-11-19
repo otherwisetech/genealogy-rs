@@ -47,14 +47,21 @@ impl GenApp {
         let (can_undo, can_redo) = (self.can_undo(false), self.can_undo(true));
         let current = i18n::locale();
         let weak = cx.entity().downgrade();
-        let lang = Button::new("lang").ghost().icon(IconName::Globe).with_size(size::CONTROL_H).tooltip(i18n::t!("common.language")).dropdown_menu_with_anchor(Anchor::TopRight, move |mut menu, _, _| {
+        let update_check = self.update_check;
+        let lang = Button::new("lang").ghost().icon(IconName::Globe).with_size(size::CONTROL_H).tooltip(i18n::t!("app.topbar.preferences")).dropdown_menu_with_anchor(Anchor::TopRight, move |mut menu, _, _| {
+            menu = menu.label(i18n::t!("common.language"));
             for (code, name) in i18n::available() {
                 let w = weak.clone();
                 menu = menu.item(PopupMenuItem::new(name).checked(code == current).on_click(move |_, window, cx| {
                     w.update(cx, |this, cx| this.set_language(code, window, cx)).ok();
                 }));
             }
-            menu
+            let w = weak.clone();
+            menu.separator()
+                .item(PopupMenuItem::new(i18n::t!("app.update.setting")).checked(update_check).on_click(move |_, _, cx| {
+                    w.update(cx, |this, cx| this.set_update_check(!update_check, cx)).ok();
+                }))
+                .label(i18n::t!("app.update.setting_hint"))
         });
 
         div()

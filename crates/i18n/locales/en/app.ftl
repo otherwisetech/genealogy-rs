@@ -181,3 +181,11 @@ app.map.links.went_to.one = Moved to {place}
 app.map.links.went_to.other = {n} moved to {place}
 app.map.links.and_more = {names} and {n} more
 app.map.links.events = Events
+
+# Update check
+app.topbar.preferences = Language and preferences
+app.update.available = A new version is available ({version})
+app.update.download = View download
+app.update.dismiss = Dismiss
+app.update.setting = Check for updates on startup
+app.update.setting_hint = Asks GitHub (api.github.com) once a day. No tree data is sent.

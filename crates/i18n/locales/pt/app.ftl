@@ -180,3 +180,11 @@ app.map.links.went_to.one = Foi para {place}
 app.map.links.went_to.other = {n} foram para {place}
 app.map.links.and_more = {names} e mais {n}
 app.map.links.events = Eventos
+
+# Update check
+app.topbar.preferences = Idioma e preferências
+app.update.available = Há uma nova versão ({version})
+app.update.download = Ver download
+app.update.dismiss = Ocultar
+app.update.setting = Procurar atualizações ao abrir
+app.update.setting_hint = Consulta o GitHub (api.github.com) uma vez por dia. Não envia dados da árvore.

@@ -16,6 +16,7 @@ mod sheet;
 mod theme;
 mod topbar;
 mod ui;
+mod update;
 
 use gpui::*;
 use gpui_component::Root;
