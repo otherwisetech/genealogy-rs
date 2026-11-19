@@ -268,3 +268,4 @@ core.kin.step_parent.u = beau-parent
 core.kin.step_child.m = beau-fils
 core.kin.step_child.f = belle-fille
 core.kin.step_child.u = bel-enfant
+core.places.parent_child = {parent} et {child}

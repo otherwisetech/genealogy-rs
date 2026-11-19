@@ -267,3 +267,4 @@ core.kin.step_parent.u = step-parent
 core.kin.step_child.m = stepson
 core.kin.step_child.f = stepdaughter
 core.kin.step_child.u = stepchild
+core.places.parent_child = {parent} and {child}

@@ -266,3 +266,24 @@ zooms in two levels on it. A plain click on the map closes the panel. Choosing a
 palette while on the map selects it and centres there.
 Filter pill top-left: «Todos» / «Antepasados de <foco>» (the focus and all ancestors over every
 FAMC link; family events count when either partner passes).
+
+**Conexiones familiares.** When a single place is selected, the panel opens with a section
+«Conexiones familiares» above the event rows (now headed «Eventos»); data from
+`Tree::place_links(groups, key, focus, filter)` (`crates/gedcom/src/place_links.rs`), respecting the
+filter pill. Summary line «42 personas · 3 ramas familiares · 1710–1918». Then up to 8 **branch
+cards** (radius 10, border token; the focus's branch first, accent border + accent-soft): people at
+the place joined when one is a direct ancestor of the other (≤ 8 generations) or they share an
+ancestor ≤ 3 generations up, plus partners. Card: «Familia Prueba» (most common surname,
+Inter 600 13), «6 personas · 4 generaciones · 1710–1800» (muted 12), and the longest direct line
+«Abel → Bruno → … → Dario» (first 3, last 2) — or up to 5 member names when there is no line;
+every name is a link that focuses the person. «N personas sin parientes aquí» below; with one
+person only «Solo una persona tiene eventos aquí.». **Parejas**: family events at the place (MARR
+first) or both partners with a RESI there — «Bruno ♥ Eva», «Matrimonio · 1765». **Padres e
+hijos**: both have events there — «Caro → Dario», «madre e hijo · nacieron aquí los dos».
+**Migraciones**: by event year, the event just before someone's first one here («Llegó desde X» /
+«3 llegaron desde X») and just after their last one («Se fue a Y»), grouped by place, most people
+first; a row click selects that place and centres the map there. The map draws a 1.5 px accent arc
+(55 % opacity, bowed to one side) from the selected place to each migration place with
+coordinates. Event rows add the relationship to the focus («Nacimiento · 1850 · tatarabuelo»,
+`Tree::kinship`), computed 12 per frame and cached per (revision, focus, language). Lists are
+capped (8 branches, 12 pairs, 10 migrations, then «y N más»); the panel scrolls.

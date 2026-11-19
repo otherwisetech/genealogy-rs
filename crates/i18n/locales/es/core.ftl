@@ -267,3 +267,4 @@ core.kin.step_parent.u = padrastro/madrastra
 core.kin.step_child.m = hijastro
 core.kin.step_child.f = hijastra
 core.kin.step_child.u = hijastro/a
+core.places.parent_child = {parent} e {child}

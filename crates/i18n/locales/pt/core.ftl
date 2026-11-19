@@ -268,3 +268,4 @@ core.kin.step_parent.u = padrasto/madrasta
 core.kin.step_child.m = enteado
 core.kin.step_child.f = enteada
 core.kin.step_child.u = enteado/a
+core.places.parent_child = {parent} e {child}

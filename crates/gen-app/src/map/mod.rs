@@ -4,6 +4,7 @@
 //! events there and clicking a person focuses them (the ficha stays visible).
 pub mod geo;
 pub mod geocode;
+mod links;
 pub mod net;
 pub mod tiles;
 
@@ -11,7 +12,7 @@ use crate::app::GenApp;
 use crate::settings::Settings;
 use crate::theme::{Tokens, tokens};
 use crate::ui::{self, avatar, icon, pill};
-use gedcom::PlaceGroup;
+use gedcom::{PlaceGroup, PlaceLinks};
 use geo::{Camera, TileKey};
 use geocode::GeoCache;
 use gpui::prelude::FluentBuilder as _;
@@ -78,6 +79,9 @@ pub struct MapState {
     selected: Option<Vec<String>>,
     show_missing: bool,
     drag: Option<(Point<Pixels>, Camera, bool)>,
+    /// «Conexiones familiares» of the selected place
+    links: Option<(links::LinksKey, Option<Rc<PlaceLinks>>)>,
+    kin: links::KinCache,
     bounds: Rc<Cell<Bounds<Pixels>>>,
 }
 
@@ -104,6 +108,8 @@ impl MapState {
             selected: None,
             show_missing: false,
             drag: None,
+            links: None,
+            kin: links::KinCache::default(),
             bounds: Rc::new(Cell::new(Bounds::default())),
         }
     }
@@ -116,6 +122,7 @@ impl MapState {
         self.hovered = None;
         self.show_missing = false;
         self.declined = false;
+        self.links = None;
     }
 
     fn cache(&mut self) -> &mut GeoCache {
@@ -436,6 +443,52 @@ impl GenApp {
         }
         self.pump_tiles(&wanted, cx);
 
+        // family connections of the selected place, and thin arcs to where people came from / went
+        let place_links = self.map_links(&groups);
+        if let Some(keys) = self.map.selected.clone() {
+            let rows = Self::map_row_people(&groups, &keys, set.as_deref());
+            self.map_fill_kin(&rows, window);
+        }
+        let mut arcs: Vec<((f64, f64), (f64, f64))> = Vec::new();
+        if let (Some(l), Some(here)) = (&place_links, self.map.selected.as_ref().and_then(|k| groups.iter().find(|g| Some(&g.key) == k.first()))) {
+            if let Some((lat, lon)) = self.map.coords(here) {
+                let a = cam.to_screen(geo::to_world(lat, lon), size);
+                for m in &l.migrations {
+                    if let Some(g) = groups.iter().find(|g| g.key == m.key)
+                        && let Some((lat, lon)) = self.map.coords(g)
+                    {
+                        arcs.push((a, cam.to_screen(geo::to_world(lat, lon), size)));
+                    }
+                }
+            }
+        }
+        let arc_color = t.accent.opacity(0.55);
+        let arcs_el = (!arcs.is_empty()).then(|| {
+            canvas(
+                |_, _, _| {},
+                move |b, _, window, _| {
+                    for ((x0, y0), (x1, y1)) in &arcs {
+                        let (dx, dy) = (x1 - x0, y1 - y0);
+                        let len = (dx * dx + dy * dy).sqrt();
+                        if len < 4. {
+                            continue;
+                        }
+                        // bow to one side by a fifth of the length
+                        let (nx, ny) = (-dy * 0.2, dx * 0.2);
+                        let p = |x: f64, y: f64| b.origin + point(px(x as f32), px(y as f32));
+                        let mut pb = PathBuilder::stroke(px(1.5));
+                        pb.move_to(p(*x0, *y0));
+                        pb.cubic_bezier_to(p(*x1, *y1), p(x0 + dx / 3. + nx, y0 + dy / 3. + ny), p(x0 + 2. * dx / 3. + nx, y0 + 2. * dy / 3. + ny));
+                        if let Ok(path) = pb.build() {
+                            window.paint_path(path, arc_color);
+                        }
+                    }
+                },
+            )
+            .absolute()
+            .inset_0()
+        });
+
         // markers
         let margin = 40.;
         let on_screen: Vec<(usize, (f64, f64))> = spots
@@ -628,6 +681,7 @@ impl GenApp {
                 cx.notify();
             }))
             .child(image_cache(tile_cache).absolute().inset_0().children(tile_els))
+            .children(arcs_el)
             .child(input)
             .children(markers)
             .children(tooltip)
@@ -635,7 +689,7 @@ impl GenApp {
             .child(self.render_map_filter(&t, cx))
             .children(self.render_map_banner(&t, pending.len(), cx))
             .child(self.render_map_controls(&t, &spots, pending.len(), &missing, cx))
-            .children(self.render_map_popover(&t, &groups, set.as_deref(), cx))
+            .children(self.render_map_popover(&t, &groups, set.as_deref(), place_links.as_deref(), cx))
             .children(self.render_map_missing(&t, &groups, &missing, cx))
             .child(
                 div()
@@ -791,7 +845,7 @@ impl GenApp {
         div().absolute().left(px(16.)).bottom(px(16.)).flex().items_center().gap(px(8.)).child(zoom).children(progress).children(unlocated).children(not_found)
     }
 
-    fn render_map_popover(&self, t: &Tokens, groups: &[PlaceGroup], set: Option<&HashSet<String>>, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_map_popover(&self, t: &Tokens, groups: &[PlaceGroup], set: Option<&HashSet<String>>, links: Option<&PlaceLinks>, cx: &mut Context<Self>) -> Option<AnyElement> {
         let keys = self.map.selected.as_ref()?;
         let chosen: Vec<&PlaceGroup> = keys.iter().filter_map(|k| groups.iter().find(|g| g.key == *k)).collect();
         if chosen.is_empty() {
@@ -799,6 +853,9 @@ impl GenApp {
         }
         let focus = self.focus_id.clone();
         let mut body = div().flex().flex_col().gap(px(2.));
+        if let Some(l) = links {
+            body = body.child(self.render_map_links(t, l, cx)).child(div().px(px(8.)).pt(px(12.)).pb(px(4.)).child(ui::section_title(t, i18n::t!("app.map.links.events"))));
+        }
         let mut rows = 0usize;
         let mut hidden = 0usize;
         for g in &chosen {
@@ -820,6 +877,10 @@ impl GenApp {
                     let id = pid.clone();
                     let hover = t.canvas;
                     let is_focus = focus.as_deref() == Some(pid.as_str());
+                    let sub = match self.map_kin(pid) {
+                        Some(rel) => i18n::t!("app.map.event_relation", event = sub.clone(), rel = rel),
+                        None => sub.clone(),
+                    };
                     body = body.child(
                         div()
                             .id(("map-row", rows))
@@ -839,7 +900,7 @@ impl GenApp {
                                     .flex_col()
                                     .min_w_0()
                                     .child(div().text_size(px(13.)).font_weight(FontWeight::MEDIUM).truncate().child(p.name()))
-                                    .child(div().text_size(px(12.)).text_color(t.ink_muted).truncate().child(sub.clone())),
+                                    .child(div().text_size(px(12.)).text_color(t.ink_muted).truncate().child(sub)),
                             )
                             .on_click(cx.listener(move |this, e: &ClickEvent, window, cx| {
                                 if e.click_count() >= 2 {
