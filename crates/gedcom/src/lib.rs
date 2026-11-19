@@ -5,8 +5,10 @@
 pub mod date;
 pub mod edit;
 pub mod insights;
+pub mod kinship;
 pub mod merge;
 pub mod node;
+pub mod quality;
 pub mod search;
 pub mod tree;
 
@@ -14,6 +16,8 @@ pub use node::{Node, ParseError};
 pub use date::{DateValue, Precision, normalize_date};
 pub use edit::{EventEdit, PersonEdit};
 pub use insights::{Completeness, Missing, TimelineItem};
+pub use kinship::{KinAlt, KinKind, Kinship, Link};
+pub use quality::{Issue, IssueKind, Severity};
 pub use search::{MergeResults, PaletteResults, PersonHit, PlaceHit, SearchFilter, fold, merge_search, palette_search, search};
 pub use tree::{EditError, Event, Family, Person, Sex, Tree, year_of};
 

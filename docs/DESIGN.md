@@ -28,6 +28,7 @@ Spanish (as in the mockup); keep all user-facing strings in Spanish.
 | connector | #A9A498 | |
 | slot-dashed | #C9C5BB | empty-slot border, dashed connectors |
 | danger | #A3382A | |
+| warning | #A86A12 | review warnings (dark #D9A441) |
 | male bg / fg | #DCE8F7 / #1E4C86 | avatar tint |
 | female bg / fg | #F7E1E8 / #8A2A4A | |
 | unknown bg / fg | #F3F1EC / #4A4741 | |
@@ -171,3 +172,50 @@ button swaps who is kept · esc / backdrop cancels. The merge is one undo step; 
 person is focused and a toast «Personas unidas · Deshacer» offers undo (⌘Z works too).
 Merge rules (pointer rewrite, alternate names, event folding, dropped CHAN/_UPD/RIN) are documented
 in `crates/gedcom/src/merge.rs`.
+
+## Relationship calculator
+
+Ficha «…» → «Calcular parentesco con…» (or the palette action «Calcular parentesco de X…», offered
+under «Acciones» when the query is empty or matches its keywords) opens the palette in picker mode:
+title «Parentesco de X con…», no chips, people only, sub-lines relative to X. ↵ / click picks. A
+~600-wide modal then shows «X es primo segundo de Y» (Fraunces 22), the common ancestor(s), the
+kind and generation counts («Consanguíneo · 3 ↑ · 3 ↓ generaciones»), other relationships through
+pedigree collapse («También: primo tercero (por otra rama)»), and the path as a Λ of mini cards
+(230 wide, avatar 30, name, years): the common ancestor on top with the accent border, X's line up
+on the left, Y's line down on the right, each step labelled («↑ madre», «↓ hija», ♥ «esposa»).
+Clicking a card closes the modal and focuses that person. Keys (context `KinshipDialog`,
+`kinship_dialog::bind_keys`): Tab or the ⇄ button flips the direction · esc / backdrop closes.
+Naming rules (lowest common ancestors over FAMC, half/double, «N generaciones de diferencia»,
+one-marriage in-laws: «suegro», «yerno», «cuñado», «padrastro», «hijastro», «tía política»…) are in
+`crates/gedcom/src/kinship.rs`.
+
+## Revisión (data-quality review)
+
+`Tree::quality_issues()` (`crates/gedcom/src/quality.rs`) scans the whole tree and returns
+`Issue { kind, severity, people, family, … }` sorted by severity (Error · Warning · Info), then kind;
+`people[0]` is who the message is about, `message()` / `kind.label()` are localized at render time.
+Checks: death before birth, burial before death, age at death > 110, born > 110 years ago with no
+death record («posiblemente fallecido», info); child born before a parent, father < 13 / mother < 12
+or father > 80 / mother > 55 at the birth, born > 1 year after the father's death or after the
+mother's; marriage before birth / before 13 / after a partner's death, partners > 30 years apart
+(info); siblings < 9 months apart (full dates only; ≤ 2 days = twins); no family links (info), empty
+family, one-member family (info), same child twice in a family; own ancestor (cycle, Tarjan —
+never hangs); HUSB with SEX F / WIFE with SEX M; no name; possible duplicates
+(`duplicate_candidates` score ≥ 0.85, each pair once, info). Dates are day ranges («1850» = the
+whole year, BEF/AFT open-ended, BET spans both): a check fires only when it holds for the whole
+range; «ABT» widens by a year and lowers the severity one step; free-text dates are skipped.
+
+Top bar: an icon button left of undo/redo (⚠ with a badge counting errors + warnings — danger
+when there are errors, else warning colour; ✓ when clean), tooltip «Revisión de datos (⌘⇧R)».
+⌘⇧R or the button toggles a **non-modal 380 px panel** between the canvas and the ficha (so the
+focused person stays visible): title «Revisión» + ×, filter chips «Todos · n / Errores · n /
+Avisos · n / Info · n», then sections per severity (icon, label, count) and per kind («Nacido antes
+que su madre · 2»; at most 30 rows, then «Ver N más»). Row: severity icon, avatar 30, name, message
+(«Nació en 1850, antes que su madre (1862)»); the selected row (accent-soft) shows links «Editar»,
+«Unir» (duplicates → the merge confirmation dialog), «Ignorar» (session only; cleared when another
+file is opened). Click / ↵ focuses `people[0]` on the canvas and keeps the panel open.
+Keys (context `Review`, `review::bind_keys`): ↑↓ move over rows (headers skipped, wraps) · ↵ focus
+(or expand «Ver más») · ⌘↵ edit · ⌘⌫ ignore · esc closes.
+Issues are recomputed off the UI thread whenever the tree revision changes (cached by revision;
+≈ 65 ms for 4 000 people in the dev profile). The ficha shows «N problemas en la revisión» under the
+chips for a person involved in errors/warnings; clicking it opens the panel on their first issue.

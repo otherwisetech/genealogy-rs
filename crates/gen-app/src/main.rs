@@ -1,10 +1,12 @@
 mod app;
 mod edit_dialog;
 mod fan;
+mod kinship_dialog;
 mod list;
 mod merge_dialog;
 mod palette;
 mod pedigree;
+mod review;
 mod settings;
 mod sheet;
 mod theme;
@@ -92,6 +94,8 @@ fn main() {
         edit_dialog::bind_keys(cx);
         palette::bind_keys(cx);
         merge_dialog::bind_keys(cx);
+        review::bind_keys(cx);
+        kinship_dialog::bind_keys(cx);
         cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
         cx.on_action(|_: &Quit, cx| cx.quit());
         gpui_component::set_locale(i18n::locale());

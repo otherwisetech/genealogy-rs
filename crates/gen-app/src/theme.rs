@@ -18,6 +18,8 @@ pub struct Tokens {
     pub connector: Hsla,
     pub slot_dashed: Hsla,
     pub danger: Hsla,
+    /// review warnings (amber)
+    pub warning: Hsla,
     pub highlight: Hsla,
     pub canvas_dots: Hsla,
     pub male_bg: Hsla,
@@ -53,6 +55,7 @@ impl Tokens {
             connector: c(0xA9A498),
             slot_dashed: c(0xC9C5BB),
             danger: c(0xA3382A),
+            warning: c(0xA86A12),
             highlight: c(0xF8E7A8),
             canvas_dots: c(0xD6D2C8),
             male_bg: c(0xDCE8F7),
@@ -78,6 +81,7 @@ impl Tokens {
             connector: c(0x6B675F),
             slot_dashed: c(0x4A4741),
             danger: c(0xD0604F),
+            warning: c(0xD9A441),
             highlight: tint(0xF8E7A8, 0.35),
             canvas_dots: c(0x2A2826),
             male_bg: tint(0xDCE8F7, 0.2),
@@ -121,6 +125,7 @@ pub mod size {
     pub const AVATAR_SHEET: Pixels = px(80.);
     pub const AVATAR_ROW: Pixels = px(30.);
     pub const SHEET_W: Pixels = px(360.);
+    pub const REVIEW_W: Pixels = px(380.);
     pub const SHEET_PAD: Pixels = px(24.);
     pub const TOPBAR_H: Pixels = px(56.);
     pub const CONTROL_H: Pixels = px(36.);

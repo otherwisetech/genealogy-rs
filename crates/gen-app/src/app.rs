@@ -1,4 +1,5 @@
 use crate::edit_dialog::{EditDialog, EditDialogEvent};
+use crate::kinship_dialog::{KinshipDialog, KinshipDialogEvent};
 use crate::merge_dialog::{MergeDialog, MergeDialogEvent};
 use crate::palette::{Palette, PaletteEvent};
 use crate::pedigree::layout::{self, Layout, V2, View, v2};
@@ -18,7 +19,7 @@ actions!(
     [Open, Save, SaveAs, NewTree, Undo, Redo, OpenPalette, Back, NavLeft, NavRight, NavUp, NavDown, CenterFocus, EditFocus, ZoomIn, ZoomOut, ZoomReset, FitView, CloseRaw, MoreGenerations, FewerGenerations]
 );
 
-const KEY_CONTEXT: &str = "GenApp";
+pub(crate) const KEY_CONTEXT: &str = "GenApp";
 pub(crate) const CANVAS_CONTEXT: &str = "GenCanvas";
 const RAW_CONTEXT: &str = "GenRaw";
 const UNDO_LIMIT: usize = 100;
@@ -125,6 +126,10 @@ pub struct GenApp {
     pub(crate) edit_dialog: Option<Entity<EditDialog>>,
     pub(crate) palette: Option<Entity<Palette>>,
     pub(crate) merge_dialog: Option<Entity<MergeDialog>>,
+    /// «Revisión» side panel (non-modal, survives `close_overlays`)
+    pub(crate) review: Option<Entity<crate::review::ReviewPanel>>,
+    pub(crate) review_state: crate::review::ReviewState,
+    pub(crate) kinship_dialog: Option<Entity<KinshipDialog>>,
     /// id whose raw GEDCOM record is shown
     pub(crate) raw: Option<String>,
     raw_focus: FocusHandle,
@@ -173,6 +178,9 @@ impl GenApp {
             edit_dialog: None,
             palette: None,
             merge_dialog: None,
+            review: None,
+            review_state: Default::default(),
+            kinship_dialog: None,
             raw: None,
             raw_focus: cx.focus_handle(),
             armed_delete: None,
@@ -257,6 +265,7 @@ impl GenApp {
         self.focus_id = None;
         self.armed_delete = None;
         self.needs_center = true;
+        self.review_state.forget_ignored();
     }
 
     fn window_title(&self) -> String {
@@ -379,7 +388,7 @@ impl GenApp {
     }
 
     pub(crate) fn undo(&mut self, redo: bool, window: &mut Window, cx: &mut Context<Self>) {
-        if self.edit_dialog.is_some() || self.palette.is_some() || self.merge_dialog.is_some() {
+        if self.edit_dialog.is_some() || self.palette.is_some() || self.merge_dialog.is_some() || self.kinship_dialog.is_some() {
             return;
         }
         let (from, to) = if redo { (&mut self.redo, &mut self.undo) } else { (&mut self.undo, &mut self.redo) };
@@ -767,8 +776,44 @@ impl GenApp {
         cx.notify();
     }
 
+    /// «Calcular parentesco con…»: the palette picks the other person, then the result dialog.
+    pub(crate) fn open_kinship_picker(&mut self, source: String, window: &mut Window, cx: &mut Context<Self>) {
+        if self.tree.person(&source).is_none() {
+            return;
+        }
+        self.close_overlays(window, cx);
+        let palette = cx.new(|cx| Palette::for_kinship(self.tree.clone(), source.clone(), window, cx));
+        self.overlay_subs = vec![cx.subscribe_in(&palette, window, move |this, _, ev: &PaletteEvent, window, cx| match ev {
+            PaletteEvent::KinshipWith(other) => {
+                let other = other.clone();
+                this.open_kinship(source.clone(), other, window, cx);
+            }
+            _ => this.close_overlays(window, cx),
+        })];
+        palette.update(cx, |p, cx| p.focus(window, cx));
+        self.palette = Some(palette);
+        cx.notify();
+    }
+
+    /// Result dialog; it reads «`a` es … de `b`», so the ficha person is the subject.
+    pub(crate) fn open_kinship(&mut self, a: String, b: String, window: &mut Window, cx: &mut Context<Self>) {
+        self.close_overlays(window, cx);
+        let dialog = cx.new(|cx| KinshipDialog::new(self.tree.clone(), b, a, cx));
+        self.overlay_subs = vec![cx.subscribe_in(&dialog, window, |this, _, ev: &KinshipDialogEvent, window, cx| match ev {
+            KinshipDialogEvent::Focus(id) => {
+                let id = id.clone();
+                this.close_overlays(window, cx);
+                this.focus_from_outside(id, window, cx);
+            }
+            KinshipDialogEvent::Close => this.close_overlays(window, cx),
+        })];
+        dialog.update(cx, |d, cx| d.focus(window, cx));
+        self.kinship_dialog = Some(dialog);
+        cx.notify();
+    }
+
     pub(crate) fn open_palette(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.edit_dialog.is_some() || self.merge_dialog.is_some() {
+        if self.edit_dialog.is_some() || self.merge_dialog.is_some() || self.kinship_dialog.is_some() {
             return;
         }
         if let Some(p) = &self.palette {
@@ -802,7 +847,12 @@ impl GenApp {
                 this.close_overlays(window, cx);
                 this.create_person(&given, &surname, window, cx);
             }
-            PaletteEvent::MergeWith(_) => {}
+            PaletteEvent::MergeWith(_) | PaletteEvent::KinshipWith(_) => {}
+            PaletteEvent::Kinship => {
+                if let Some(id) = this.focus_id.clone() {
+                    this.open_kinship_picker(id, window, cx);
+                }
+            }
             PaletteEvent::Dismiss => this.close_overlays(window, cx),
         })];
         palette.update(cx, |p, cx| p.focus(window, cx));
@@ -823,6 +873,7 @@ impl GenApp {
         self.edit_dialog = None;
         self.palette = None;
         self.merge_dialog = None;
+        self.kinship_dialog = None;
         self.raw = None;
         self.overlay_subs.clear();
         self.restore_focus(window, cx);
@@ -901,6 +952,7 @@ pub(crate) fn split_name(q: &str) -> (String, String) {
 impl Render for GenApp {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.tick(window);
+        self.ensure_quality(cx);
         let t = tokens(cx);
         let main = match self.tab {
             Tab::Pedigree | Tab::Descendants => self.render_canvas(window, cx).into_any_element(),
@@ -959,6 +1011,7 @@ impl Render for GenApp {
             .on_action(cx.listener(|this, _: &Redo, window, cx| this.undo(true, window, cx)))
             .on_action(cx.listener(|this, _: &Back, window, cx| this.go_back(window, cx)))
             .on_action(cx.listener(|this, _: &OpenPalette, window, cx| this.open_palette(window, cx)))
+            .on_action(cx.listener(|this, _: &crate::review::ToggleReview, window, cx| this.toggle_review(window, cx)))
             .on_action(cx.listener(|this, _: &NavLeft, window, cx| this.navigate((-1, 0), window, cx)))
             .on_action(cx.listener(|this, _: &NavRight, window, cx| this.navigate((1, 0), window, cx)))
             .on_action(cx.listener(|this, _: &NavUp, window, cx| this.navigate((0, -1), window, cx)))
@@ -982,11 +1035,12 @@ impl Render for GenApp {
             .on_action(cx.listener(|this, _: &MoreGenerations, window, cx| this.step_generations(true, window, cx)))
             .on_action(cx.listener(|this, _: &FewerGenerations, window, cx| this.step_generations(false, window, cx)))
             .child(self.render_topbar(window, cx))
-            .child(div().flex().flex_row().flex_1().min_h_0().child(div().flex_1().min_w_0().h_full().child(main)).child(self.render_sheet(window, cx)))
+            .child(div().flex().flex_row().flex_1().min_h_0().child(div().flex_1().min_w_0().h_full().child(main)).when_some(self.review.clone(), |d, r| d.child(r)).child(self.render_sheet(window, cx)))
             .children(toast)
             .when_some(self.palette.clone(), |d, p| d.child(p))
             .when_some(self.edit_dialog.clone(), |d, e| d.child(e))
             .when_some(self.merge_dialog.clone(), |d, m| d.child(m))
+            .when_some(self.kinship_dialog.clone(), |d, k| d.child(k))
             .when_some(self.raw.clone(), |d, id| d.child(self.render_raw(&id, cx)))
     }
 }

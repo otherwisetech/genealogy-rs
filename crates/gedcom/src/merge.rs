@@ -88,13 +88,44 @@ impl Tree {
             .filter(|(_, o)| o.as_str() != id)
             .filter_map(|(i, o)| {
                 let p = &self.people[o];
-                let s = duplicate_score(me, &mine, p)?;
+                let s = duplicate_score(me, &mine, p, &NameParts::of(p))?;
                 self.can_merge(id, o).ok()?;
                 Some((i, o.clone(), s))
             })
             .collect();
         out.sort_by(|a, b| b.2.total_cmp(&a.2).then(a.0.cmp(&b.0)));
         out.into_iter().map(|(_, id, s)| (id, s)).collect()
+    }
+
+    /// Every pair (a before b in `order`) that [`Tree::duplicate_candidates`] would score at
+    /// least `min`, each pair once. A pair without a birth or death year known on both sides
+    /// scores at most 0.7 + 2 · 0.15 · 0.3 = 0.79, so for `min` above that only people born (or
+    /// dead) within 2 years of each other are compared: a sweep over people sorted by year.
+    pub(crate) fn duplicate_pairs(&self, min: f32) -> Vec<(String, String, f32)> {
+        debug_assert!(min > 0.79, "the year sweep would miss pairs");
+        let people: Vec<(&Person, NameParts)> = self.order.iter().map(|id| &self.people[id]).map(|p| (p, NameParts::of(p))).collect();
+        let mut pairs: Vec<(usize, usize)> = Vec::new();
+        for year in [Person::birth_year, Person::death_year] {
+            let mut by: Vec<(i32, usize)> = people.iter().enumerate().filter(|(_, (_, n))| !n.is_empty()).filter_map(|(i, (p, _))| Some((year(p)?, i))).collect();
+            by.sort_unstable();
+            for (x, &(ya, ia)) in by.iter().enumerate() {
+                for &(_, ib) in by[x + 1..].iter().take_while(|(yb, _)| yb - ya <= 2) {
+                    pairs.push((ia.min(ib), ia.max(ib)));
+                }
+            }
+        }
+        pairs.sort_unstable();
+        pairs.dedup();
+        let mut out = Vec::new();
+        for (i, j) in pairs {
+            let ((a, na), (b, nb)) = (&people[i], &people[j]);
+            if let Some(s) = duplicate_score(a, na, b, nb).filter(|s| *s >= min)
+                && self.can_merge(&a.id, &b.id).is_ok()
+            {
+                out.push((a.id.clone(), b.id.clone(), s));
+            }
+        }
+        out
     }
 }
 
@@ -205,12 +236,19 @@ fn token_like(a: &str, b: &str) -> bool {
 }
 
 fn within_one_edit(a: &str, b: &str) -> bool {
+    if a.is_ascii() && b.is_ascii() {
+        return one_edit(a.as_bytes(), b.as_bytes());
+    }
     let (a, b): (Vec<char>, Vec<char>) = (a.chars().collect(), b.chars().collect());
+    one_edit(&a, &b)
+}
+
+fn one_edit<T: PartialEq>(a: &[T], b: &[T]) -> bool {
     let (s, l) = if a.len() <= b.len() { (a, b) } else { (b, a) };
     if l.len() - s.len() > 1 {
         return false;
     }
-    let p = s.iter().zip(&l).take_while(|(x, y)| x == y).count();
+    let p = s.iter().zip(l.iter()).take_while(|(x, y)| x == y).count();
     if p == s.len() {
         return true;
     }
@@ -233,11 +271,18 @@ fn overlap(a: &[String], b: &[String]) -> f32 {
     2. * hits as f32 / (a.len() + b.len()) as f32
 }
 
-fn duplicate_score(me: &Person, mine: &NameParts, other: &Person) -> Option<f32> {
+fn duplicate_score(me: &Person, mine: &NameParts, other: &Person, theirs: &NameParts) -> Option<f32> {
     if me.sex != Sex::Unknown && other.sex != Sex::Unknown && me.sex != other.sex {
         return None;
     }
-    let theirs = NameParts::of(other);
+    // years first: cheap, and they rule out most pairs before any name comparison
+    let year = |a: Option<i32>, b: Option<i32>| match (a, b) {
+        (Some(a), Some(b)) if (a - b).abs() > 2 => None,
+        (Some(a), Some(b)) => Some(1. - (a - b).abs() as f32 / 3.),
+        _ => Some(0.3),
+    };
+    let b = year(me.birth_year(), other.birth_year())?;
+    let d = year(me.death_year(), other.death_year())?;
     // both parts must agree when both people have them
     let part = |a: &[String], b: &[String]| if a.is_empty() || b.is_empty() { None } else { Some(overlap(a, b)) };
     let g = part(&mine.given, &theirs.given);
@@ -253,13 +298,6 @@ fn duplicate_score(me: &Person, mine: &NameParts, other: &Person) -> Option<f32>
     if name < 0.5 {
         return None;
     }
-    let year = |a: Option<i32>, b: Option<i32>| match (a, b) {
-        (Some(a), Some(b)) if (a - b).abs() > 2 => None,
-        (Some(a), Some(b)) => Some(1. - (a - b).abs() as f32 / 3.),
-        _ => Some(0.3),
-    };
-    let b = year(me.birth_year(), other.birth_year())?;
-    let d = year(me.death_year(), other.death_year())?;
     Some((0.7 * name + 0.15 * b + 0.15 * d).clamp(0., 1.))
 }
 

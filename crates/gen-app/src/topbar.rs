@@ -72,6 +72,7 @@ impl GenApp {
             .child(self.render_tabs(&t, cx))
             .child(div().flex_1())
             .child(search)
+            .child(self.render_review_button(&t, cx))
             .child(
                 div()
                     .flex()

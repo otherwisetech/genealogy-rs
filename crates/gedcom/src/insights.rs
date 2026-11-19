@@ -262,7 +262,7 @@ impl Tree {
         None
     }
 
-    fn rel_label(&self, stem: &str, focus: &str, other: &str, sex: Sex) -> String {
+    pub(crate) fn rel_label(&self, stem: &str, focus: &str, other: &str, sex: Sex) -> String {
         let married = self.families.values().any(|f| {
             let ps: Vec<&String> = f.partners().collect();
             ps.iter().any(|p| *p == focus) && ps.iter().any(|p| *p == other) && f.events.iter().any(|e| e.tag == "MARR")

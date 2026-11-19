@@ -22,7 +22,7 @@ const TRANSPARENT: &[&str] = &["Some", "Ok", "Err", "format", "from", "into", "t
 
 /// Keys built at runtime (`format!("core.event.{}", …)`); every key under them counts as used.
 /// A new dynamic prefix must be added here on purpose.
-const DYNAMIC_PREFIXES: &[&str] = &["core.event.", "core.rel."];
+const DYNAMIC_PREFIXES: &[&str] = &["core.event.", "core.rel.", "core.kin."];
 
 #[derive(Debug, Clone, PartialEq)]
 enum Tok {

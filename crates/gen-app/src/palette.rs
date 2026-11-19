@@ -1,6 +1,6 @@
 //! ⌘K palette (docs/DESIGN.md, artboard 3).
 use crate::theme::{self, Tokens, size};
-use gedcom::{PaletteResults, SearchFilter, Tree, merge_search, palette_search};
+use gedcom::{PaletteResults, SearchFilter, Tree, fold, merge_search, palette_search};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -19,6 +19,10 @@ pub enum PaletteEvent {
     CreatePerson(String),
     /// merge-picker mode: the person chosen to merge with the source
     MergeWith(String),
+    /// «Calcular parentesco»: open the kinship picker for the focus person
+    Kinship,
+    /// kinship-picker mode: the person to compare with the source
+    KinshipWith(String),
     /// esc or backdrop click
     Dismiss,
 }
@@ -65,17 +69,28 @@ pub(crate) fn cycle_filter(current: SearchFilter, delta: isize) -> SearchFilter 
 pub(crate) enum Row {
     Person(usize),
     Place(usize),
+    Kinship,
     Create,
 }
 
-/// Selectable rows in display order: people, places, then «Crear persona» for a non-empty query.
-pub(crate) fn rows(results: &PaletteResults, query: &str) -> Vec<Row> {
+/// Selectable rows in display order: people, places, «Calcular parentesco» when offered, then
+/// «Crear persona» for a non-empty query.
+pub(crate) fn rows(results: &PaletteResults, query: &str, kinship: bool) -> Vec<Row> {
     let mut out: Vec<Row> = (0..results.people.len()).map(Row::Person).collect();
     out.extend((0..results.places.len()).map(Row::Place));
+    if kinship {
+        out.push(Row::Kinship);
+    }
     if !query.trim().is_empty() {
         out.push(Row::Create);
     }
     out
+}
+
+/// Whether every query word starts a word of `keywords` (empty query: yes).
+pub(crate) fn matches_keywords(query: &str, keywords: &str) -> bool {
+    let words: Vec<String> = fold(keywords).split_whitespace().map(str::to_string).collect();
+    fold(query).split_whitespace().all(|q| words.iter().any(|w| w.starts_with(q)))
 }
 
 pub(crate) fn wrap(selected: usize, len: usize, delta: isize) -> usize {
@@ -128,6 +143,8 @@ pub struct Palette {
     merge_source: Option<String>,
     /// leading `results.people` entries that are likely duplicates (merge mode)
     n_candidates: usize,
+    /// kinship-picker mode: whom we compare the picked person with
+    kin_source: Option<String>,
     _subs: Vec<Subscription>,
 }
 
@@ -152,6 +169,7 @@ impl Palette {
             synced_locale: "",
             merge_source: None,
             n_candidates: 0,
+            kin_source: None,
             _subs: subs,
         };
         palette.refresh(cx);
@@ -166,9 +184,27 @@ impl Palette {
         palette
     }
 
-    /// Rows in display order; the merge picker has no places and no «Crear persona».
+    /// Picker for «Calcular parentesco con…»: people only, sub-lines relative to `source`.
+    pub fn for_kinship(tree: Rc<Tree>, source: String, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let mut palette = Self::new(tree, Some(source.clone()), window, cx);
+        palette.kin_source = Some(source);
+        palette.refresh(cx);
+        palette
+    }
+
+    /// Picker modes (merge, kinship) choose one person: no chips, places or actions.
+    fn picking(&self) -> bool {
+        self.merge_source.is_some() || self.kin_source.is_some()
+    }
+
+    /// Rows in display order; the pickers have no places and no actions.
     fn rows(&self, cx: &App) -> Vec<Row> {
-        if self.merge_source.is_some() { rows(&self.results, "") } else { rows(&self.results, &self.query(cx)) }
+        if self.picking() {
+            return rows(&self.results, "", false);
+        }
+        let query = self.query(cx);
+        let kinship = self.focus_person.is_some() && matches_keywords(&query, &i18n::t!("dialogs.palette.kinship_keywords"));
+        rows(&self.results, &query, kinship)
     }
 
     /// Focus the query input; the host calls this right after opening.
@@ -190,13 +226,22 @@ impl Palette {
             cx.notify();
             return;
         }
+        if let Some(src) = &self.kin_source {
+            let mut r = palette_search(&self.tree, query.trim(), SearchFilter::People, Some(src), LIMIT + 1);
+            r.people.retain(|h| &h.id != src);
+            r.people.truncate(LIMIT);
+            self.results = PaletteResults { people: r.people, places: vec![] };
+            self.selected = 0;
+            cx.notify();
+            return;
+        }
         self.results = palette_search(&self.tree, query.trim(), self.filter, self.focus_person.as_deref(), LIMIT);
         self.selected = 0;
         cx.notify();
     }
 
     fn set_filter(&mut self, filter: SearchFilter, cx: &mut Context<Self>) {
-        if self.filter != filter && self.merge_source.is_none() {
+        if self.filter != filter && !self.picking() {
             self.filter = filter;
             self.refresh(cx);
         }
@@ -214,12 +259,15 @@ impl Palette {
                 let Some(hit) = self.results.people.get(i) else { return };
                 if self.merge_source.is_some() {
                     PaletteEvent::MergeWith(hit.id.clone())
+                } else if self.kin_source.is_some() {
+                    PaletteEvent::KinshipWith(hit.id.clone())
                 } else if secondary { PaletteEvent::Edit(hit.id.clone()) } else { PaletteEvent::Focus(hit.id.clone()) }
             }
             Row::Place(i) => {
                 let Some(hit) = self.results.places.get(i) else { return };
                 PaletteEvent::Place(hit.place.clone())
             }
+            Row::Kinship => PaletteEvent::Kinship,
             Row::Create => PaletteEvent::CreatePerson(self.query(cx).trim().to_string()),
         };
         cx.emit(ev);
@@ -234,7 +282,7 @@ impl Palette {
 
     fn create(&mut self, cx: &mut Context<Self>) {
         let query = self.query(cx).trim().to_string();
-        if !query.is_empty() && self.merge_source.is_none() {
+        if !query.is_empty() && !self.picking() {
             cx.emit(PaletteEvent::CreatePerson(query));
         }
     }
@@ -245,7 +293,13 @@ impl Palette {
         if self.synced_locale != locale {
             let first = self.synced_locale.is_empty();
             self.synced_locale = locale;
-            let text = if self.merge_source.is_some() { i18n::t!("dialogs.palette.merge.placeholder") } else { i18n::t!("dialogs.palette.placeholder") };
+            let text = if self.merge_source.is_some() {
+                i18n::t!("dialogs.palette.merge.placeholder")
+            } else if self.kin_source.is_some() {
+                i18n::t!("dialogs.palette.kinship.placeholder")
+            } else {
+                i18n::t!("dialogs.palette.placeholder")
+            };
             self.input.update(cx, |s, cx| s.set_placeholder(text, window, cx));
             if !first {
                 let selected = self.selected;
@@ -373,8 +427,20 @@ impl Palette {
                             .child(self.enter_hint(index, t)),
                     );
                 }
-                Row::Create => {
+                Row::Kinship => {
+                    let name = self.focus_person.as_deref().and_then(|id| self.tree.person(id)).map(|p| p.name()).unwrap_or_default();
                     list = list.child(section(i18n::t!("dialogs.palette.section.actions"))).child(
+                        self.row_shell(index, row, t, cx)
+                            .child(div().size(size::AVATAR_ROW).flex_none().rounded_full().flex().items_center().justify_center().bg(t.accent_soft).text_color(t.accent).child(Icon::new(IconName::Network).small()))
+                            .child(div().flex_1().min_w_0().truncate().text_size(px(13.)).font_weight(FontWeight::MEDIUM).text_color(t.ink).child(i18n::t!("dialogs.palette.kinship", name = name)))
+                            .child(self.enter_hint(index, t)),
+                    );
+                }
+                Row::Create => {
+                    if !all.contains(&Row::Kinship) {
+                        list = list.child(section(i18n::t!("dialogs.palette.section.actions")));
+                    }
+                    list = list.child(
                         self.row_shell(index, row, t, cx)
                             .child(div().size(size::AVATAR_ROW).flex_none().rounded_full().flex().items_center().justify_center().bg(t.accent_soft).text_color(t.accent).child(Icon::new(IconName::Plus).small()))
                             .child(div().flex_1().min_w_0().truncate().text_size(px(13.)).font_weight(FontWeight::MEDIUM).text_color(t.ink).child(i18n::t!("dialogs.palette.create", query = query.trim())))
@@ -395,8 +461,11 @@ impl Render for Palette {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_locale(window, cx);
         let t = theme::tokens(cx);
-        let merging = self.merge_source.is_some();
-        let merge_title = self.merge_source.as_deref().and_then(|id| self.tree.person(id)).map(|p| i18n::t!("dialogs.palette.merge.title", name = p.name()));
+        let merging = self.picking();
+        let name_of = |id: &Option<String>| id.as_deref().and_then(|id| self.tree.person(id)).map(|p| p.name());
+        let merge_title = name_of(&self.merge_source)
+            .map(|n| i18n::t!("dialogs.palette.merge.title", name = n))
+            .or_else(|| name_of(&self.kin_source).map(|n| i18n::t!("dialogs.palette.kinship.title", name = n)));
         let footer = h_flex()
             .gap_3()
             .px_4()
@@ -477,7 +546,7 @@ impl Render for Palette {
 
 #[cfg(test)]
 mod tests {
-    use super::{Row, cycle_filter, hl_ranges, rows, wrap};
+    use super::{Row, cycle_filter, hl_ranges, matches_keywords, rows, wrap};
     use gedcom::{PaletteResults, PersonHit, PlaceHit, SearchFilter};
 
     #[test]
@@ -494,8 +563,12 @@ mod tests {
     fn rows_and_wrapping() {
         let hit = |id: &str| PersonHit { id: id.into(), name: id.into(), name_hl: vec![], sub: String::new(), sub_hl: vec![] };
         let res = PaletteResults { people: vec![hit("I1"), hit("I2")], places: vec![PlaceHit { place: "X".into(), hl: vec![], events: 3 }] };
-        assert_eq!(rows(&res, "an"), vec![Row::Person(0), Row::Person(1), Row::Place(0), Row::Create]);
-        assert_eq!(rows(&res, "  "), vec![Row::Person(0), Row::Person(1), Row::Place(0)]);
+        assert_eq!(rows(&res, "an", false), vec![Row::Person(0), Row::Person(1), Row::Place(0), Row::Create]);
+        assert_eq!(rows(&res, "  ", false), vec![Row::Person(0), Row::Person(1), Row::Place(0)]);
+        assert_eq!(rows(&res, "par", true), vec![Row::Person(0), Row::Person(1), Row::Place(0), Row::Kinship, Row::Create]);
+        assert!(matches_keywords("", "parentesco relación"));
+        assert!(matches_keywords("Relac paren", "parentesco relación"));
+        assert!(!matches_keywords("ana", "parentesco relación"));
         assert_eq!(wrap(3, 4, 1), 0);
         assert_eq!(wrap(0, 4, -1), 3);
         assert_eq!(wrap(0, 0, 1), 0);

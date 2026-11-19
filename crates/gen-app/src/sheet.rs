@@ -71,11 +71,15 @@ impl GenApp {
             move |menu, _, _| {
                 let (id1, w1, id2, w2) = (id.clone(), weak.clone(), id.clone(), weak.clone());
                 let (id3, w3) = (id.clone(), weak.clone());
+                let (id4, w4) = (id.clone(), weak.clone());
                 menu.item(PopupMenuItem::new(i18n::t!("app.sheet.view_gedcom")).on_click(move |_, window, cx| {
                     w1.update(cx, |this, cx| this.show_raw(id1.clone(), window, cx)).ok();
                 }))
                 .item(PopupMenuItem::new(i18n::t!("app.sheet.merge")).on_click(move |_, window, cx| {
                     w3.update(cx, |this, cx| this.open_merge_picker(id3.clone(), window, cx)).ok();
+                }))
+                .item(PopupMenuItem::new(i18n::t!("app.sheet.kinship")).on_click(move |_, window, cx| {
+                    w4.update(cx, |this, cx| this.open_kinship_picker(id4.clone(), window, cx)).ok();
                 }))
                 .item(PopupMenuItem::new(i18n::t!("app.sheet.delete")).on_click(move |_, _, cx| {
                     w2.update(cx, |this, cx| {
@@ -96,6 +100,7 @@ impl GenApp {
             .child(div().font_family(SERIF).font_weight(FontWeight::SEMIBOLD).text_size(px(24.)).line_height(px(30.)).text_center().child(p.name()))
             .child(div().text_size(px(13.)).text_color(t.ink_muted).child(life))
             .child(div().flex().gap(px(6.)).child(chip(sbg, sfg, sex)).child(chip(t.canvas, t.ink_muted, p.id.clone())))
+            .children(self.review_hint(t, &p.id, cx))
             .child(
                 div()
                     .flex()
