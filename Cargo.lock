@@ -2114,7 +2114,7 @@ dependencies = [
 
 [[package]]
 name = "gen-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "gen-gedcom",
@@ -2132,7 +2132,7 @@ dependencies = [
 
 [[package]]
 name = "gen-gedcom"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "gen-i18n",
  "thiserror 2.0.20",
@@ -2140,7 +2140,7 @@ dependencies = [
 
 [[package]]
 name = "gen-i18n"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "generic-array"
