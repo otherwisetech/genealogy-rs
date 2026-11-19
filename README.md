@@ -28,6 +28,28 @@ Ready-made builds for macOS (Apple silicon and Intel), Linux and Windows are att
   `~/.local/share/applications` / `~/.local/share/icons` for a menu entry. Needs Vulkan.
 - **Windows:** unzip and run `genealogy-rs.exe` (SmartScreen may ask to confirm, since it is unsigned).
 
+### Opening `.ged` files by double-click
+
+- **macOS:** the app declares the GEDCOM type (`org.gedcom.ged`), so once it is in Applications it
+  appears in Finder's *Open With* for `.ged` files. To make it the default: select a `.ged` file →
+  *Get Info* (⌘I) → *Open with: genealogy-rs* → *Change All…*.
+- **Linux:** from the extracted folder, install the binary, menu entry, icon and the
+  `application/x-gedcom` MIME type, then set the default:
+
+  ```sh
+  install -Dm755 genealogy-rs ~/.local/bin/genealogy-rs
+  install -Dm644 genealogy-rs.desktop ~/.local/share/applications/genealogy-rs.desktop
+  install -Dm644 genealogy-rs.png ~/.local/share/icons/hicolor/1024x1024/apps/genealogy-rs.png
+  install -Dm644 genealogy-rs-gedcom.xml ~/.local/share/mime/packages/genealogy-rs-gedcom.xml
+  update-mime-database ~/.local/share/mime
+  update-desktop-database ~/.local/share/applications
+  xdg-mime default genealogy-rs.desktop application/x-gedcom
+  ```
+  (`~/.local/bin` must be on your `PATH`.)
+- **Windows:** the zip has no installer, so nothing is registered. Right-click a `.ged` file →
+  *Open with* → *Choose another app* → *Choose an app on your PC* → pick `genealogy-rs.exe` → *Always*.
+  From a terminal, `genealogy-rs.exe tree.ged` opens it directly.
+
 ### Unsigned builds and update notices
 
 The downloads are built by GitHub Actions from the tagged source, but they are **not code-signed

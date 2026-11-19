@@ -169,7 +169,8 @@ pub struct GenApp {
     pub(crate) notes_expanded: bool,
     /// historical events interleaved in the sheet's timeline
     pub(crate) show_history: bool,
-    guard: Option<&'static str>,
+    /// action armed by `guard_unsaved`; repeating it discards the unsaved changes
+    guard: Option<String>,
     toast: Option<Toast>,
     /// a newer release found on startup; cleared when dismissed
     update: Option<crate::update::Release>,
@@ -417,12 +418,12 @@ impl GenApp {
     }
 
     /// Two-step confirmation before discarding unsaved changes.
-    fn guard_unsaved(&mut self, what: &'static str, cx: &mut Context<Self>) -> bool {
-        if !self.dirty || self.guard == Some(what) {
+    fn guard_unsaved(&mut self, what: &str, cx: &mut Context<Self>) -> bool {
+        if !self.dirty || self.guard.as_deref() == Some(what) {
             self.guard = None;
             return true;
         }
-        self.guard = Some(what);
+        self.guard = Some(what.to_string());
         self.toast("app.toast.unsaved_repeat", "", cx);
         false
     }
@@ -440,6 +441,18 @@ impl GenApp {
             }
         })
         .detach();
+    }
+
+    /// A file handed over by the OS while the app runs (Finder, Open With). With unsaved changes
+    /// the first request only warns; opening the same file again discards them.
+    pub(crate) fn open_path(&mut self, path: PathBuf, window: &mut Window, cx: &mut Context<Self>) {
+        window.activate_window();
+        if !self.dirty && self.path.as_deref() == Some(path.as_path()) {
+            return;
+        }
+        if self.guard_unsaved(&format!("open:{}", path.display()), cx) {
+            self.load(path, window, cx);
+        }
     }
 
     pub(crate) fn new_tree(&mut self, window: &mut Window, cx: &mut Context<Self>) {

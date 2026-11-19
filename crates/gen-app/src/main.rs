@@ -9,6 +9,7 @@ mod kinship_dialog;
 mod list;
 mod map;
 mod merge_dialog;
+mod open_files;
 mod palette;
 mod pedigree;
 mod review;
@@ -19,6 +20,7 @@ mod topbar;
 mod ui;
 mod update;
 
+use futures::StreamExt as _;
 use gpui::*;
 use gpui_component::Root;
 use gpui_component_assets::Assets;
@@ -90,13 +92,18 @@ const FONTS: [&[u8]; 4] = [
 
 fn main() {
     i18n::set_locale(settings::initial_language(&settings::Settings::load()));
-    let arg = std::env::args().nth(1);
-    if matches!(arg.as_deref(), Some("-h" | "--help")) {
+    let initial: Option<PathBuf> = open_files::path_from_args(std::env::args().skip(1));
+    if matches!(initial.as_deref().and_then(|p| p.to_str()), Some("-h" | "--help")) {
         println!("{}", i18n::t!("app.cli.usage"));
         return;
     }
-    let initial: Option<PathBuf> = arg.map(PathBuf::from);
-    gpui_platform::application().with_assets(AppAssets).run(move |cx| {
+    // Finder hands files over as an Apple Event, possibly before the window exists: queue them.
+    let (open_tx, mut open_rx) = futures::channel::mpsc::unbounded::<Vec<String>>();
+    let application = gpui_platform::application().with_assets(AppAssets);
+    application.on_open_urls(move |urls| {
+        open_tx.unbounded_send(urls).ok();
+    });
+    application.run(move |cx| {
         if let Err(e) = cx.text_system().add_fonts(FONTS.iter().map(|f| Cow::Borrowed(*f)).collect()) {
             eprintln!("fonts: {e}");
         }
@@ -124,11 +131,20 @@ fn main() {
         };
         let initial = initial.clone();
         cx.spawn(async move |cx| {
-            cx.open_window(window_options, |window, cx| {
-                let view = cx.new(|cx| app::GenApp::new(initial, window, cx));
-                cx.new(|cx| Root::new(view, window, cx))
-            })
-            .expect("open window");
+            let mut view = None;
+            let handle = cx
+                .open_window(window_options, |window, cx| {
+                    let v = cx.new(|cx| app::GenApp::new(initial, window, cx));
+                    view = Some(v.clone());
+                    cx.new(|cx| Root::new(v, window, cx))
+                })
+                .expect("open window");
+            let view = view.expect("window built its view");
+            while let Some(urls) = open_rx.next().await {
+                // single-document app: the first openable file wins
+                let Some(path) = open_files::paths_from_urls(&urls).into_iter().next() else { continue };
+                handle.update(cx, |_, window, cx| view.update(cx, |this, cx| this.open_path(path, window, cx))).ok();
+            }
         })
         .detach();
     });

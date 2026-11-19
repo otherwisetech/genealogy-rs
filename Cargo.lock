@@ -2117,6 +2117,7 @@ name = "gen-app"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "futures",
  "gen-gedcom",
  "gen-i18n",
  "gpui",

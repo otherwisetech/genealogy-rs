@@ -64,6 +64,7 @@ jobs:
           mkdir -p dist/$pkg
           cp target/release/genealogy-rs dist/$pkg/
           cp packaging/linux/genealogy-rs.desktop dist/$pkg/
+          cp packaging/linux/genealogy-rs-gedcom.xml dist/$pkg/
           cp crates/gen-app/assets/logo/gen-icon-1024.png dist/$pkg/genealogy-rs.png
           cp README.md LICENSE-MIT LICENSE-APACHE dist/$pkg/
           tar -C dist -czf dist/$pkg.tar.gz $pkg
