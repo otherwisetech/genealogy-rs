@@ -57,13 +57,16 @@ impl GenApp {
                 }));
             }
             let w = weak.clone();
+            let about = weak.clone();
             menu.separator()
                 .item(PopupMenuItem::new(i18n::t!("app.update.setting")).checked(update_check).on_click(move |_, _, cx| {
                     w.update(cx, |this, cx| this.set_update_check(!update_check, cx)).ok();
                 }))
                 .label(i18n::t!("app.update.setting_hint"))
                 .separator()
-                .item(PopupMenuItem::new(crate::developer_credit()).on_click(|_, _, cx| cx.open_url(crate::DEVELOPER_URL)))
+                .item(PopupMenuItem::new(crate::about::menu_label()).on_click(move |_, window, cx| {
+                    about.update(cx, |this, cx| this.open_about(window, cx)).ok();
+                }))
         });
 
         let file_menu = ui::menu_button(&t, "file-menu", i18n::t!("app.topbar.file_menu")).dropdown_menu_with_anchor(Anchor::TopRight, {

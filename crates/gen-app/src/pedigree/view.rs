@@ -189,7 +189,6 @@ impl GenApp {
             .id("tree-canvas")
             .track_focus(&self.canvas_focus)
             .key_context(CANVAS_CONTEXT)
-            .relative()
             .size_full()
             .flex()
             .flex_col()
@@ -206,18 +205,6 @@ impl GenApp {
                         .child(ui::filled_button(t, "empty-new", t.accent).child(i18n::t!("app.topbar.new_person")).on_click(cx.listener(|this, _, window, cx| this.new_tree(window, cx)))),
                 )
             })
-            .child(
-                div().absolute().bottom(px(16.)).left_0().right_0().flex().justify_center().child(
-                    div()
-                        .id("developer-credit")
-                        .text_size(px(12.))
-                        .text_color(t.ink_muted)
-                        .cursor_pointer()
-                        .hover(|s| s.underline())
-                        .child(crate::developer_credit())
-                        .on_click(|_, _, cx| cx.open_url(crate::DEVELOPER_URL)),
-                ),
-            )
             .into_any_element()
     }
 

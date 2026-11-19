@@ -160,6 +160,7 @@ pub struct GenApp {
     pub(crate) review: Option<Entity<crate::review::ReviewPanel>>,
     pub(crate) review_state: crate::review::ReviewState,
     pub(crate) kinship_dialog: Option<Entity<KinshipDialog>>,
+    about: Option<Entity<crate::about::AboutDialog>>,
     /// id whose raw GEDCOM record is shown
     pub(crate) raw: Option<String>,
     raw_focus: FocusHandle,
@@ -219,6 +220,7 @@ impl GenApp {
             review: None,
             review_state: Default::default(),
             kinship_dialog: None,
+            about: None,
             raw: None,
             raw_focus: cx.focus_handle(),
             armed_delete: None,
@@ -583,7 +585,7 @@ impl GenApp {
     }
 
     pub(crate) fn undo(&mut self, redo: bool, window: &mut Window, cx: &mut Context<Self>) {
-        if self.edit_dialog.is_some() || self.palette.is_some() || self.merge_dialog.is_some() || self.kinship_dialog.is_some() {
+        if self.edit_dialog.is_some() || self.palette.is_some() || self.merge_dialog.is_some() || self.kinship_dialog.is_some() || self.about.is_some() {
             return;
         }
         let (from, to) = if redo { (&mut self.redo, &mut self.undo) } else { (&mut self.undo, &mut self.redo) };
@@ -1008,8 +1010,19 @@ impl GenApp {
         cx.notify();
     }
 
+    pub(crate) fn open_about(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close_overlays(window, cx);
+        let dialog = cx.new(crate::about::AboutDialog::new);
+        self.overlay_subs = vec![cx.subscribe_in(&dialog, window, |this, _, ev: &crate::about::AboutEvent, window, cx| match ev {
+            crate::about::AboutEvent::Close => this.close_overlays(window, cx),
+        })];
+        dialog.update(cx, |d, cx| d.focus(window, cx));
+        self.about = Some(dialog);
+        cx.notify();
+    }
+
     pub(crate) fn open_palette(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.edit_dialog.is_some() || self.merge_dialog.is_some() || self.kinship_dialog.is_some() {
+        if self.edit_dialog.is_some() || self.merge_dialog.is_some() || self.kinship_dialog.is_some() || self.about.is_some() {
             return;
         }
         if let Some(p) = &self.palette {
@@ -1072,6 +1085,7 @@ impl GenApp {
         self.palette = None;
         self.merge_dialog = None;
         self.kinship_dialog = None;
+        self.about = None;
         self.raw = None;
         self.overlay_subs.clear();
         self.restore_focus(window, cx);
@@ -1202,6 +1216,7 @@ impl Render for GenApp {
             .text_color(t.ink)
             .font_family(SANS)
             .text_size(px(13.))
+            .on_action(cx.listener(|this, _: &crate::ShowAbout, window, cx| this.open_about(window, cx)))
             .on_action(cx.listener(|this, _: &Open, window, cx| this.open_dialog(window, cx)))
             .on_action(cx.listener(|this, _: &Save, window, cx| this.save(false, window, cx)))
             .on_action(cx.listener(|this, _: &SaveAs, window, cx| this.save(true, window, cx)))
@@ -1235,12 +1250,14 @@ impl Render for GenApp {
             .on_action(cx.listener(|this, _: &FewerGenerations, window, cx| this.step_generations(false, window, cx)))
             .child(self.render_topbar(window, cx))
             .child(div().flex().flex_row().flex_1().min_h_0().child(div().flex_1().min_w_0().h_full().child(main)).when_some(self.review.clone(), |d, r| d.child(r)).child(self.render_sheet(window, cx)))
+            .child(self.render_footer(&t, cx))
             .children(toast)
             .children(self.render_update_notice(cx))
             .when_some(self.palette.clone(), |d, p| d.child(p))
             .when_some(self.edit_dialog.clone(), |d, e| d.child(e))
             .when_some(self.merge_dialog.clone(), |d, m| d.child(m))
             .when_some(self.kinship_dialog.clone(), |d, k| d.child(k))
+            .when_some(self.about.clone(), |d, a| d.child(a))
             .when_some(self.raw.clone(), |d, id| d.child(self.render_raw(&id, cx)))
     }
 }

@@ -1,6 +1,7 @@
 // No console window behind the app on Windows release builds.
 #![cfg_attr(all(target_os = "windows", not(debug_assertions)), windows_subsystem = "windows")]
 
+mod about;
 mod app;
 mod edit_dialog;
 mod fan;
@@ -24,10 +25,10 @@ use gpui_component_assets::Assets;
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-actions!(genealogy, [Quit, OpenDeveloperSite]);
+actions!(genealogy, [Quit, OpenDeveloperSite, ShowAbout]);
 
 pub(crate) const APP_NAME: &str = "genealogy-rs"; // i18n-ok: product name
-const DEVELOPER: &str = "Otherwise Technologies LLC"; // i18n-ok: company name
+pub(crate) const DEVELOPER: &str = "Otherwise Technologies LLC"; // i18n-ok: company name
 pub(crate) const DEVELOPER_URL: &str = "https://otherwisetech.com";
 
 /// «Developed by Otherwise Technologies LLC · Wyoming, USA» in the current language.
@@ -37,7 +38,7 @@ pub(crate) fn developer_credit() -> String {
 
 /// The native menu bar holds plain strings, so it is rebuilt on every language switch.
 pub(crate) fn set_app_menus(cx: &mut App) {
-    let items = vec![MenuItem::action(developer_credit(), OpenDeveloperSite), MenuItem::separator(), MenuItem::action(i18n::t!("app.menu.quit"), Quit)];
+    let items = vec![MenuItem::action(about::menu_label(), ShowAbout), MenuItem::action(developer_credit(), OpenDeveloperSite), MenuItem::separator(), MenuItem::action(i18n::t!("app.menu.quit"), Quit)];
     cx.set_menus(vec![Menu { name: APP_NAME.into(), items, disabled: false }]);
 }
 
@@ -109,6 +110,7 @@ fn main() {
         merge_dialog::bind_keys(cx);
         review::bind_keys(cx);
         kinship_dialog::bind_keys(cx);
+        about::bind_keys(cx);
         cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
         cx.on_action(|_: &Quit, cx| cx.quit());
         cx.on_action(|_: &OpenDeveloperSite, cx| cx.open_url(DEVELOPER_URL));
