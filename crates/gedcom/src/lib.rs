@@ -6,6 +6,8 @@ pub mod date;
 pub mod edit;
 pub mod facts;
 pub mod history;
+pub mod gedcom7;
+pub mod import;
 pub mod insights;
 pub mod kinship;
 pub mod merge;
@@ -24,6 +26,7 @@ pub use date::{DateValue, Precision, normalize_date};
 pub use edit::{EventEdit, PersonEdit};
 pub use history::{HistEvent, current_year};
 pub use facts::{FAMILY_EVENT_TAGS, FactEdit, PERSON_EVENT_TAGS};
+pub use import::ImportReport;
 pub use insights::{Completeness, Missing, TimelineItem};
 pub use kinship::{KinAlt, KinKind, Kinship, Link};
 pub use place_links::{Branch, Couple, Migration, MoveDir, ParentChild, PlaceLinks};
@@ -42,8 +45,17 @@ pub fn load(path: &std::path::Path) -> std::io::Result<Result<Tree, ParseError>>
 
 /// Atomic-ish save: write a sibling temp file, then rename over the target.
 pub fn save(tree: &Tree, path: &std::path::Path) -> std::io::Result<()> {
+    write_atomic(path, &tree.to_gedcom())
+}
+
+/// Like [`save`], as GEDCOM 7.0 ([`Tree::to_gedcom7`]). The tree itself stays 5.5.1.
+pub fn save_gedcom7(tree: &Tree, path: &std::path::Path) -> std::io::Result<()> {
+    write_atomic(path, &tree.to_gedcom7())
+}
+
+fn write_atomic(path: &std::path::Path, text: &str) -> std::io::Result<()> {
     let tmp = path.with_extension("ged.tmp");
-    std::fs::write(&tmp, tree.to_gedcom())?;
+    std::fs::write(&tmp, text)?;
     std::fs::rename(&tmp, path)
 }
 
