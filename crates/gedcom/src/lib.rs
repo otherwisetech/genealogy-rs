@@ -4,6 +4,7 @@
 //! family-tree view and edit API over it; [`search`] is accent-insensitive person search.
 pub mod date;
 pub mod edit;
+pub mod facts;
 pub mod insights;
 pub mod kinship;
 pub mod merge;
@@ -20,6 +21,7 @@ pub use node::{Node, ParseError};
 pub use notes::note_text;
 pub use date::{DateValue, Precision, normalize_date};
 pub use edit::{EventEdit, PersonEdit};
+pub use facts::{FAMILY_EVENT_TAGS, FactEdit, PERSON_EVENT_TAGS};
 pub use insights::{Completeness, Missing, TimelineItem};
 pub use kinship::{KinAlt, KinKind, Kinship, Link};
 pub use place_links::{Branch, Couple, Migration, MoveDir, ParentChild, PlaceLinks};

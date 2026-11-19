@@ -1,5 +1,6 @@
 //! Whole-person edit used by the edit dialog.
 use crate::node::Node;
+use crate::facts::FactEdit;
 use crate::sources::CitationEdit;
 use crate::tree::{EditError, Event, Sex, Tree};
 
@@ -24,6 +25,9 @@ pub struct PersonEdit {
     pub note: String,
     /// on the person and on their events (see [`Tree::citations`])
     pub citations: Vec<CitationEdit>,
+    /// every event of the person and of their unions (see [`Tree::fact_edits`]); the first
+    /// birth/death ones are edited through `birth`/`death` instead
+    pub facts: Vec<FactEdit>,
 }
 
 fn event_edit(e: Option<&Event>, default_tag: &str) -> EventEdit {
@@ -51,6 +55,7 @@ impl Tree {
             death: event_edit(p.death.as_ref(), "DEAT"),
             note,
             citations: self.citations(id),
+            facts: self.fact_edits(id),
         })
     }
 
@@ -60,6 +65,9 @@ impl Tree {
         let cur = self.person_edit(id).ok_or_else(|| EditError::NotFound(id.into()))?;
         // citations first: they address events by position, which the event edits below may shift
         let mut changed = self.apply_citations(id, &cur.citations, &edit.citations)?;
+        changed |= self.apply_facts(&cur.facts, &edit.facts)?;
+        // birth/death below are compared against the file as it is now
+        let cur = if changed { self.person_edit(id).ok_or_else(|| EditError::NotFound(id.into()))? } else { cur };
         if edit.given.trim() != cur.given.trim() || edit.surname.trim() != cur.surname.trim() {
             self.set_name(id, &edit.given, &edit.surname)?;
             changed = true;
@@ -140,11 +148,23 @@ mod tests {
         e2.surname = "García".into();
         assert!(t.apply_person_edit(&e2).unwrap());
         let t2 = Tree::parse(&t.to_gedcom()).unwrap();
-        assert_eq!(t2.person_edit("I3").unwrap(), e2);
+        // the event list now also holds the new death
+        assert_eq!(PersonEdit { facts: vec![], ..t2.person_edit("I3").unwrap() }, PersonEdit { facts: vec![], ..e2 });
         assert!(t2.record_text("I3").contains("_UID KEEPME"));
 
         let missing = PersonEdit { id: "I99".into(), ..Default::default() };
         assert!(t.apply_person_edit(&missing).is_err());
+    }
+
+    #[test]
+    fn events_and_birth_in_one_save() {
+        let mut t = Tree::parse(SAMPLE).unwrap();
+        let mut e = t.person_edit("I3").unwrap();
+        e.facts.push(crate::FactEdit { record: "I3".into(), tag: "OCCU".into(), value: "Maestra".into(), ..Default::default() });
+        e.birth.place = "Toledo".into();
+        assert!(t.apply_person_edit(&e).unwrap());
+        let text = t.record_text("I3");
+        assert!(text.contains("2 PLAC Toledo") && text.contains("1 OCCU Maestra"), "{text}");
     }
 
     #[test]
