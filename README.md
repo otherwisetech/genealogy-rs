@@ -119,3 +119,5 @@ The language is picked from the system locale on first run and switched from the
 ## License
 
 MIT OR Apache-2.0
+
+Developed by [Otherwise Technologies LLC](https://otherwisetech.com), Wyoming, USA.
