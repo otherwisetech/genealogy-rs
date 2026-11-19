@@ -304,3 +304,14 @@ Top-bar «Importar / exportar» (`ui::menu_button`, menu anchored top-right):
 
 Online trees (FamilySearch, Ancestry, MyHeritage) are not contacted: FamilySearch has no public
 API without a partner key, and their GEDCOM downloads open or import directly.
+
+## About
+
+A slim 24 px footer bar (surface, top border) sits under the main area on every screen, empty
+tree included: «genealogy-rs 0.1.0 · Otherwise Technologies LLC · Acerca de», right-aligned, muted
+11 px. Clicking it — or «Acerca de genealogy-rs» in the native app menu (first item) or the globe
+menu — opens a ~420-wide modal (`crates/gen-app/src/about.rs`): the app icon (88 px), name
+(Fraunces 22), «Versión x.y.z», a two-sentence description, «Desarrollado por Otherwise
+Technologies LLC» / «Wyoming, EE. UU.», an accent button «Visitar otherwisetech.com», a link
+«Código fuente en GitHub» and a muted «Código abierto · MIT o Apache-2.0». Esc, × or a backdrop
+click closes it. The native menu keeps the credit item that opens otherwisetech.com.
