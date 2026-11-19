@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=genealogy-rs
+GenericName=Family tree explorer
+Comment=Explore and edit GEDCOM family trees
+Exec=genealogy-rs %f
+Icon=genealogy-rs
+Terminal=false
+Categories=Office;Education;
+MimeType=application/x-gedcom;text/x-gedcom;

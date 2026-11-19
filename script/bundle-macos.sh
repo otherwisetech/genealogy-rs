@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 # Wraps the `genealogy-rs` binary in a macOS .app so Finder and the Dock show the app icon.
 # Usage: script/bundle-macos.sh [debug|release]   (default: release; builds first)
+#        UNIVERSAL=1 script/bundle-macos.sh       (release for Apple silicon + Intel, joined with lipo)
 set -euo pipefail
 profile="${1:-release}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
-if [ "$profile" = release ]; then cargo build -p gen-app --release; else cargo build -p gen-app; fi
+if [ "${UNIVERSAL:-0}" = 1 ]; then
+  profile=release
+  for t in aarch64-apple-darwin x86_64-apple-darwin; do
+    rustup target add "$t" >/dev/null
+    cargo build -p gen-app --release --target "$t"
+  done
+  mkdir -p target/release
+  lipo -create -output target/release/genealogy-rs target/aarch64-apple-darwin/release/genealogy-rs target/x86_64-apple-darwin/release/genealogy-rs
+elif [ "$profile" = release ]; then cargo build -p gen-app --release; else cargo build -p gen-app; fi
 version="$(cargo pkgid -p gen-app | sed 's/.*[#@]//')"
 app="target/$profile/genealogy-rs.app"
 rm -rf "$app"

@@ -17,6 +17,17 @@ A fast desktop app to **explore and edit GEDCOM family trees**, written in Rust 
 - Undo/redo, and **lossless saving**: every tag the app does not understand (vendor `_UID`, `_UPD`,
   sources, media, …) is written back untouched.
 
+## Download
+
+Ready-made builds for macOS (Apple silicon and Intel), Linux and Windows are attached to each
+[GitHub Release](https://github.com/otherwisetech/genealogy-rs/releases).
+
+- **macOS:** unzip and drag `genealogy-rs.app` to Applications. The app is not notarized yet, so the
+  first time right-click it → *Open* (or run `xattr -dr com.apple.quarantine /Applications/genealogy-rs.app`).
+- **Linux:** extract the `.tar.gz` and run `./genealogy-rs`; copy `genealogy-rs.desktop` and the icon to
+  `~/.local/share/applications` / `~/.local/share/icons` for a menu entry. Needs Vulkan.
+- **Windows:** unzip and run `genealogy-rs.exe` (SmartScreen may ask to confirm, since it is unsigned).
+
 ## Run
 
 ```sh
