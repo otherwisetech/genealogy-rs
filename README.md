@@ -8,6 +8,10 @@ A fast desktop app to **explore and edit GEDCOM family trees**, written in Rust 
 - Open any `.ged` export (MyHeritage, Ancestry, FamilySearch, Gramps, …) — thousands of people load in milliseconds.
 - Instant accent-insensitive search by name, married name, year, place or id.
 - Pan/zoom pedigree and descendants canvas (3–6 generations), ancestor fan, full list, ⌘K search.
+- Map of the tree's places on OpenStreetMap: markers sized by event count, clustering, «ancestors of»
+  filter. Uses `PLAC.MAP` coordinates from the file; other places are geocoded with Nominatim only
+  after you agree (only place names are sent, 1 request/second, cached forever). Tiles are cached
+  on disk (≤ 200 MB). Map data © OpenStreetMap contributors.
 - Edit names, sex, birth/death, notes in a dialog; add father/mother/partner/son/daughter; delete.
 - Spanish, English, Portuguese and French UI (switch from the globe menu; remembered across runs).
 - Undo/redo, and **lossless saving**: every tag the app does not understand (vendor `_UID`, `_UPD`,

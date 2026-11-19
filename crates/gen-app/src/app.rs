@@ -69,6 +69,7 @@ pub(crate) enum Tab {
     Descendants,
     Fan,
     List,
+    Map,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -139,6 +140,7 @@ pub struct GenApp {
     toast: Option<Toast>,
     pub(crate) list_scroll: UniformListScrollHandle,
     pub(crate) sheet_scroll: ScrollHandle,
+    pub(crate) map: crate::map::MapState,
     focus: FocusHandle,
     pub(crate) canvas_focus: FocusHandle,
     overlay_subs: Vec<Subscription>,
@@ -156,6 +158,7 @@ impl GenApp {
         let subs = vec![window.observe_window_appearance(|window, cx| sync_theme(Some(window), cx))];
         let canvas_focus = cx.focus_handle();
         canvas_focus.focus(window, cx);
+        let settings = Settings::load();
         let mut this = GenApp {
             tree: Rc::new(Tree::new_empty()),
             rev: 0,
@@ -167,7 +170,7 @@ impl GenApp {
             focus_id: None,
             trail: vec![],
             tab: Tab::Pedigree,
-            generations: Settings::load().generations.map_or(layout::GEN_DEFAULT, |g| g.clamp(layout::GEN_MIN, layout::GEN_MAX)),
+            generations: settings.generations.map_or(layout::GEN_DEFAULT, |g| g.clamp(layout::GEN_MIN, layout::GEN_MAX)),
             view: View::default(),
             anim: None,
             needs_center: true,
@@ -189,6 +192,7 @@ impl GenApp {
             toast: None,
             list_scroll: UniformListScrollHandle::new(),
             sheet_scroll: ScrollHandle::new(),
+            map: crate::map::MapState::new(&settings),
             focus: cx.focus_handle(),
             canvas_focus,
             overlay_subs: vec![],
@@ -266,6 +270,7 @@ impl GenApp {
         self.armed_delete = None;
         self.needs_center = true;
         self.review_state.forget_ignored();
+        self.map.reset();
     }
 
     fn window_title(&self) -> String {
@@ -838,7 +843,9 @@ impl GenApp {
             PaletteEvent::Place(place) => {
                 let place = place.clone();
                 this.close_overlays(window, cx);
-                if let Some(id) = first_at_place(&this.tree, &place) {
+                if this.tab == Tab::Map {
+                    this.map_show_place(&place, cx);
+                } else if let Some(id) = first_at_place(&this.tree, &place) {
                     this.focus_from_outside(id, window, cx);
                 }
             }
@@ -884,7 +891,7 @@ impl GenApp {
     pub(crate) fn restore_focus(&self, window: &mut Window, cx: &mut App) {
         match self.tab {
             Tab::Pedigree | Tab::Descendants => self.canvas_focus.focus(window, cx),
-            Tab::List | Tab::Fan => self.focus.focus(window, cx),
+            Tab::List | Tab::Fan | Tab::Map => self.focus.focus(window, cx),
         }
     }
 
@@ -958,6 +965,7 @@ impl Render for GenApp {
             Tab::Pedigree | Tab::Descendants => self.render_canvas(window, cx).into_any_element(),
             Tab::List => self.render_list(cx).into_any_element(),
             Tab::Fan => self.render_fan(cx).into_any_element(),
+            Tab::Map => self.render_map(window, cx),
         };
         let toast = self.toast.as_ref().map(|toast| {
             div()

@@ -1,18 +1,30 @@
-//! Tiny persisted preferences (UI language, generations shown), stored as a flat JSON object.
+//! Tiny persisted preferences (UI language, generations shown, map geocoding consent), stored as
+//! a flat JSON object.
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Settings {
     pub language: Option<String>,
     pub generations: Option<usize>,
+    /// the user agreed to send place names to Nominatim (map tab)
+    pub geocode_consent: bool,
 }
 
-fn dir() -> Option<PathBuf> {
+pub(crate) fn dir() -> Option<PathBuf> {
     let home = std::env::var_os("HOME").map(PathBuf::from);
     if cfg!(target_os = "macos") {
         return home.map(|h| h.join("Library/Application Support/genealogy-rs"));
     }
     std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).or_else(|| home.map(|h| h.join(".config"))).map(|d| d.join("genealogy-rs"))
+}
+
+/// Per-user cache directory (map tiles); safe to delete.
+pub(crate) fn cache_dir() -> Option<PathBuf> {
+    let home = std::env::var_os("HOME").map(PathBuf::from);
+    if cfg!(target_os = "macos") {
+        return home.map(|h| h.join("Library/Caches/genealogy-rs"));
+    }
+    std::env::var_os("XDG_CACHE_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).or_else(|| home.map(|h| h.join(".cache"))).map(|d| d.join("genealogy-rs"))
 }
 
 fn file() -> Option<PathBuf> {
@@ -33,7 +45,7 @@ impl Settings {
     }
 
     fn parse(s: &str) -> Settings {
-        Settings { language: json_string(s, "language"), generations: json_number(s, "generations") }
+        Settings { language: json_string(s, "language"), generations: json_number(s, "generations"), geocode_consent: json_bool(s, "geocode_consent").unwrap_or(false) }
     }
 
     fn to_json(&self) -> String {
@@ -43,6 +55,9 @@ impl Settings {
         }
         if let Some(g) = self.generations {
             fields.push(format!("  \"generations\": {g}"));
+        }
+        if self.geocode_consent {
+            fields.push("  \"geocode_consent\": true".into());
         }
         if fields.is_empty() { "{}\n".into() } else { format!("{{\n{}\n}}\n", fields.join(",\n")) }
     }
@@ -60,6 +75,18 @@ fn json_number(s: &str, key: &str) -> Option<usize> {
     let at = s.find(&format!("\"{key}\""))? + key.len() + 2;
     let rest = s[at..].trim_start().strip_prefix(':')?.trim_start();
     rest[..rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len())].parse().ok()
+}
+
+fn json_bool(s: &str, key: &str) -> Option<bool> {
+    let at = s.find(&format!("\"{key}\""))? + key.len() + 2;
+    let rest = s[at..].trim_start().strip_prefix(':')?.trim_start();
+    if rest.starts_with("true") {
+        Some(true)
+    } else if rest.starts_with("false") {
+        Some(false)
+    } else {
+        None
+    }
 }
 
 /// System UI language tag ("es-CO", "en_US.UTF-8"…), best effort.
@@ -93,14 +120,16 @@ mod tests {
 
     #[test]
     fn roundtrip() {
-        let s = Settings { language: Some("en".into()), generations: None };
+        let s = Settings { language: Some("en".into()), generations: None, geocode_consent: false };
         assert_eq!(Settings::parse(&s.to_json()), s);
-        let s = Settings { language: Some("fr".into()), generations: Some(12) };
+        let s = Settings { language: Some("fr".into()), generations: Some(12), geocode_consent: true };
         assert_eq!(Settings::parse(&s.to_json()), s);
-        let s = Settings { language: None, generations: Some(6) };
+        let s = Settings { language: None, generations: Some(6), geocode_consent: false };
         assert_eq!(Settings::parse(&s.to_json()), s);
         assert_eq!(Settings::parse("{ \"generations\": \"x\" }").generations, None);
         assert_eq!(Settings::parse("{}"), Settings::default());
+        assert!(Settings::parse("{ \"geocode_consent\" : true }").geocode_consent);
+        assert!(!Settings::parse("{ \"geocode_consent\": \"yes\" }").geocode_consent);
         assert_eq!(Settings::parse("{ \"language\" : \"es\", \"x\": 1 }").language.as_deref(), Some("es"));
     }
 }

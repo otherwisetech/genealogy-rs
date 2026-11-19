@@ -57,7 +57,7 @@ pub fn event_label(tag: &str) -> String {
     if KNOWN.contains(&tag) { i18n::tr(&format!("core.event.{}", tag.to_lowercase()), &[]) } else { tag.to_string() }
 }
 
-const EVENT_TAGS: &[&str] = &[
+pub(crate) const EVENT_TAGS: &[&str] = &[
     "BIRT", "CHR", "BAPM", "DEAT", "BURI", "CREM", "ADOP", "BARM", "BASM", "BLES", "CHRA", "CONF", "FCOM", "ORDN", "NATU", "EMIG", "IMMI", "CENS", "PROB", "WILL", "GRAD", "RETI", "EVEN",
     "RESI", "OCCU", "EDUC", "RELI", "TITL", "NATI", "CAST", "DSCR", "IDNO", "NCHI", "NMR", "PROP", "SSN", "FACT", "MARR", "DIV", "ENGA", "ANUL", "MARB", "MARC", "MARL", "MARS", "DIVF",
 ];

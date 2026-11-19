@@ -3,6 +3,7 @@ mod edit_dialog;
 mod fan;
 mod kinship_dialog;
 mod list;
+mod map;
 mod merge_dialog;
 mod palette;
 mod pedigree;

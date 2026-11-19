@@ -90,7 +90,7 @@ avatar "?") · Empty slot («+ Añadir madre», dashed; hover → accent).
 
 **Top bar (56):** logo (accent rounded square with tree glyph) · tree name (Fraunces 16, e.g.
 «Familia Ordóñez») with subtitle «132 personas · 31 familias · guardado» (or «sin guardar») ·
-segmented tabs **Pedigrí | Descendientes | Abanico | Lista** · search field «Buscar persona, lugar,
+segmented tabs **Pedigrí | Descendientes | Abanico | Lista | Mapa** · search field «Buscar persona, lugar,
 año» with ⌘K hint (opens the palette) · undo, redo icons · «Exportar GEDCOM» outline button ·
 «+ Persona» accent button.
 
@@ -219,3 +219,50 @@ Keys (context `Review`, `review::bind_keys`): ↑↓ move over rows (headers ski
 Issues are recomputed off the UI thread whenever the tree revision changes (cached by revision;
 ≈ 65 ms for 4 000 people in the dev profile). The ficha shows «N problemas en la revisión» under the
 chips for a person involved in errors/warnings; clicking it opens the panel on their first issue.
+
+## Mapa (places on OpenStreetMap)
+
+Tab «Mapa» (`crates/gen-app/src/map/`). The ficha stays visible on the right.
+
+**Data.** `Tree::place_groups()` (`crates/gedcom/src/places.rs`) collects every person and family
+event with a `PLAC` (birth, death, marriage, burial, residence…), grouped by `place_key` (folded,
+whitespace collapsed, comma parts trimmed); the most used spelling is shown. A family event
+counts once and lists both partners. Coordinates come first from `PLAC.MAP.LATI/LONG`
+(`N/S/E/W` prefixes or signed degrees, `parse_coord`); otherwise from the geocoding cache.
+Coordinates are never written back into the GEDCOM.
+
+**Privacy / network.** Geocoding is opt-in. The first time the map has places without
+coordinates a calm banner says «Para ubicar N lugares se consultará OpenStreetMap (Nominatim).
+Solo se envían nombres de lugares.» with «Buscar ubicaciones» (accent) / «Ahora no» (outline).
+Consent is remembered in `settings.json` (`geocode_consent`); «Ahora no» lasts for the session and
+leaves a quiet «N lugares sin ubicar» pill that brings the banner back. Only place names are sent,
+never people. Requests go to `nominatim.openstreetmap.org/search?format=jsonv2&limit=1`, one at a
+time and at least 1.1 s apart (process-wide lock), with the User-Agent
+`genealogy-rs/<version> (+https://github.com/otherwisetech/genealogy-rs)`. Every answer — «not
+found» included — is cached forever in `geocode-cache.json` next to `settings.json` and never
+asked again. A network error or HTTP error stops the run and shows «No se pudo conectar con
+OpenStreetMap.» + «Reintentar». While it runs a pill shows «Ubicando 12 de 40…»; afterwards
+«N lugares no encontrados» opens the list of names OpenStreetMap did not recognise.
+
+**Tiles.** Standard OSM raster tiles (`tile.openstreetmap.org/{z}/{x}/{y}.png`, same User-Agent),
+only the ones on screen, centre first, at most 2 downloads at a time, no prefetch. Disk cache under
+`~/Library/Caches/genealogy-rs/tiles/{z}/{x}/{y}.png` (XDG cache dir elsewhere), capped at 200 MB
+(oldest files deleted down to 160 MB); tiles older than 30 days are shown and fetched again.
+Offline, downloads pause 20 s after a failure (5 min on HTTP 403/429). While a tile loads, a
+lower-zoom tile already in memory is shown scaled, else the canvas colour. In dark mode tiles are
+drawn at 78 % opacity over the dark canvas. Attribution «© OpenStreetMap contributors» sits
+bottom-right on a translucent surface chip and opens openstreetmap.org/copyright.
+
+**View.** Web-Mercator camera with fractional zoom 1–18 (tiles of the rounded level, scaled):
+drag or wheel pans, ⌘+wheel / pinch zooms around the pointer; bottom-left pill − / + (snap to whole
+levels) · fit («Ver todos los lugares»). The initial view (and every filter change) fits all
+markers, up to zoom 11; new geocoding results refit until the user moves the map.
+Markers: accent circles with a 2 px surface ring and the event count (radius 9 + 4·ln n, max 24),
+clustered greedily in screen space when they overlap. Hover → dark tooltip with the place name (or
+«N lugares») and «N eventos». Click a single place → a 320-wide panel top-right: place name,
+«N eventos», rows of avatar 30 + name + «Nacimiento · 1850»; the focus row is accent-soft. Click a
+row focuses that person (ficha updates, the map stays), double-click edits. Clicking a cluster
+zooms in two levels on it. A plain click on the map closes the panel. Choosing a place in the ⌘K
+palette while on the map selects it and centres there.
+Filter pill top-left: «Todos» / «Antepasados de <foco>» (the focus and all ancestors over every
+FAMC link; family events count when either partner passes).

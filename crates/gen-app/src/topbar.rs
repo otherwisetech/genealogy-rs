@@ -90,7 +90,7 @@ impl GenApp {
     }
 
     fn render_tabs(&self, t: &Tokens, cx: &mut Context<Self>) -> impl IntoElement {
-        let tabs = [(Tab::Pedigree, "app.tab.pedigree"), (Tab::Descendants, "app.tab.descendants"), (Tab::Fan, "app.tab.fan"), (Tab::List, "app.tab.list")];
+        let tabs = [(Tab::Pedigree, "app.tab.pedigree"), (Tab::Descendants, "app.tab.descendants"), (Tab::Fan, "app.tab.fan"), (Tab::List, "app.tab.list"), (Tab::Map, "app.tab.map")];
         let mut seg = div().flex().flex_none().items_center().p(px(3.)).gap(px(2.)).h(size::CONTROL_H).rounded(px(10.)).bg(t.canvas);
         for (i, (tab, key)) in tabs.into_iter().enumerate() {
             let sel = self.tab == tab;
