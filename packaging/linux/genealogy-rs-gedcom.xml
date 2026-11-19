@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-gedcom">
+    <comment>GEDCOM family tree</comment>
+    <comment xml:lang="es">Árbol genealógico GEDCOM</comment>
+    <comment xml:lang="pt">Árvore genealógica GEDCOM</comment>
+    <comment xml:lang="fr">Arbre généalogique GEDCOM</comment>
+    <alias type="text/x-gedcom"/>
+    <sub-class-of type="text/plain"/>
+    <generic-icon name="text-x-generic"/>
+    <glob pattern="*.ged"/>
+    <glob pattern="*.GED" case-sensitive="true"/>
+  </mime-type>
+</mime-info>
