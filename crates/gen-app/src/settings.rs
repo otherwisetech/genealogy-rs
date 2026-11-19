@@ -1,16 +1,29 @@
-//! Tiny persisted preferences (UI language, generations shown, map geocoding consent), stored as
-//! a flat JSON object.
+//! Tiny persisted preferences (UI language, generations shown, map geocoding consent, update
+//! check), stored as a flat JSON object.
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settings {
     pub language: Option<String>,
     pub generations: Option<usize>,
     /// the user agreed to send place names to Nominatim (map tab)
     pub geocode_consent: bool,
+    /// ask GitHub for the latest release on startup (at most once a day)
+    pub update_check: bool,
+    /// unix seconds of the last answered update check
+    pub last_update_check: Option<u64>,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Settings { language: None, generations: None, geocode_consent: false, update_check: true, last_update_check: None }
+    }
 }
 
 pub(crate) fn dir() -> Option<PathBuf> {
+    if cfg!(windows) {
+        return std::env::var_os("APPDATA").filter(|v| !v.is_empty()).map(|d| PathBuf::from(d).join("genealogy-rs"));
+    }
     let home = std::env::var_os("HOME").map(PathBuf::from);
     if cfg!(target_os = "macos") {
         return home.map(|h| h.join("Library/Application Support/genealogy-rs"));
@@ -20,6 +33,9 @@ pub(crate) fn dir() -> Option<PathBuf> {
 
 /// Per-user cache directory (map tiles); safe to delete.
 pub(crate) fn cache_dir() -> Option<PathBuf> {
+    if cfg!(windows) {
+        return std::env::var_os("LOCALAPPDATA").filter(|v| !v.is_empty()).map(|d| PathBuf::from(d).join("genealogy-rs"));
+    }
     let home = std::env::var_os("HOME").map(PathBuf::from);
     if cfg!(target_os = "macos") {
         return home.map(|h| h.join("Library/Caches/genealogy-rs"));
@@ -45,7 +61,13 @@ impl Settings {
     }
 
     fn parse(s: &str) -> Settings {
-        Settings { language: json_string(s, "language"), generations: json_number(s, "generations"), geocode_consent: json_bool(s, "geocode_consent").unwrap_or(false) }
+        Settings {
+            language: json_string(s, "language"),
+            generations: json_number(s, "generations").and_then(|g| usize::try_from(g).ok()),
+            geocode_consent: json_bool(s, "geocode_consent").unwrap_or(false),
+            update_check: json_bool(s, "update_check").unwrap_or(true),
+            last_update_check: json_number(s, "last_update_check"),
+        }
     }
 
     fn to_json(&self) -> String {
@@ -59,6 +81,12 @@ impl Settings {
         if self.geocode_consent {
             fields.push("  \"geocode_consent\": true".into());
         }
+        if !self.update_check {
+            fields.push("  \"update_check\": false".into());
+        }
+        if let Some(t) = self.last_update_check {
+            fields.push(format!("  \"last_update_check\": {t}"));
+        }
         if fields.is_empty() { "{}\n".into() } else { format!("{{\n{}\n}}\n", fields.join(",\n")) }
     }
 }
@@ -71,7 +99,7 @@ fn json_string(s: &str, key: &str) -> Option<String> {
 }
 
 /// Value of a top-level unsigned integer field.
-fn json_number(s: &str, key: &str) -> Option<usize> {
+fn json_number(s: &str, key: &str) -> Option<u64> {
     let at = s.find(&format!("\"{key}\""))? + key.len() + 2;
     let rest = s[at..].trim_start().strip_prefix(':')?.trim_start();
     rest[..rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len())].parse().ok()
@@ -120,12 +148,14 @@ mod tests {
 
     #[test]
     fn roundtrip() {
-        let s = Settings { language: Some("en".into()), generations: None, geocode_consent: false };
+        let s = Settings { language: Some("en".into()), ..Settings::default() };
         assert_eq!(Settings::parse(&s.to_json()), s);
-        let s = Settings { language: Some("fr".into()), generations: Some(12), geocode_consent: true };
+        let s = Settings { language: Some("fr".into()), generations: Some(12), geocode_consent: true, update_check: false, last_update_check: Some(1_790_000_000) };
         assert_eq!(Settings::parse(&s.to_json()), s);
-        let s = Settings { language: None, generations: Some(6), geocode_consent: false };
+        let s = Settings { generations: Some(6), last_update_check: Some(42), ..Settings::default() };
         assert_eq!(Settings::parse(&s.to_json()), s);
+        assert!(Settings::parse("{}").update_check);
+        assert!(!Settings::parse("{ \"update_check\": false }").update_check);
         assert_eq!(Settings::parse("{ \"generations\": \"x\" }").generations, None);
         assert_eq!(Settings::parse("{}"), Settings::default());
         assert!(Settings::parse("{ \"geocode_consent\" : true }").geocode_consent);

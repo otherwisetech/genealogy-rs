@@ -28,6 +28,18 @@ Ready-made builds for macOS (Apple silicon and Intel), Linux and Windows are att
   `~/.local/share/applications` / `~/.local/share/icons` for a menu entry. Needs Vulkan.
 - **Windows:** unzip and run `genealogy-rs.exe` (SmartScreen may ask to confirm, since it is unsigned).
 
+### Unsigned builds and update notices
+
+The downloads are built by GitHub Actions from the tagged source, but they are **not code-signed
+or notarized** (that needs paid certificates), which is why macOS and Windows ask for confirmation
+the first time. If you prefer, build from source (see *Run*).
+
+There is no auto-updater. On startup, at most once a day, the app asks the public GitHub API
+(`api.github.com/repos/otherwisetech/genealogy-rs/releases/latest`) for the latest release; the
+request carries only a `genealogy-rs/<version>` User-Agent with the project URL, never tree data. If a newer version
+exists, a small notice offers to open the release page in your browser. Turn it off from the globe
+menu (*Check for updates on startup*).
+
 ## Run
 
 ```sh

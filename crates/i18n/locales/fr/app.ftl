@@ -182,3 +182,11 @@ app.map.links.went_to.one = Parti à {place}
 app.map.links.went_to.other = {n} partis à {place}
 app.map.links.and_more = {names} et {n} de plus
 app.map.links.events = Événements
+
+# Update check
+app.topbar.preferences = Langue et préférences
+app.update.available = Une nouvelle version est disponible ({version})
+app.update.download = Voir le téléchargement
+app.update.dismiss = Masquer
+app.update.setting = Rechercher les mises à jour au démarrage
+app.update.setting_hint = Interroge GitHub (api.github.com) une fois par jour. Aucune donnée de l’arbre n’est envoyée.
