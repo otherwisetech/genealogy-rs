@@ -2,6 +2,15 @@
 app.cli.usage = uso: genealogy-rs [ARQUIVO.ged]\n\nExplore e edite árvores genealógicas GEDCOM.
 app.menu.quit = Sair do gen
 app.credit = Desenvolvido por {company} · Wyoming, EUA
+app.about.menu = Sobre o {app}
+app.about.footer = {app} {version} · {company} · Sobre
+app.about.version = Versão {version}
+app.about.description = Explore e edite árvores genealógicas GEDCOM no seu computador: árvore, leque, mapa de lugares, parentescos e revisão de dados. Seus arquivos nunca saem do seu computador.
+app.about.developed_by = Desenvolvido por {company}
+app.about.location = Wyoming, EUA
+app.about.website = Visitar {site}
+app.about.source = Código-fonte no GitHub
+app.about.license = Código aberto · MIT ou Apache-2.0
 app.file.open_prompt = Abrir GEDCOM
 app.file.import_prompt = Importar outra árvore (GEDCOM)
 
