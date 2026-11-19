@@ -9,9 +9,9 @@ pub struct Settings {
 fn dir() -> Option<PathBuf> {
     let home = std::env::var_os("HOME").map(PathBuf::from);
     if cfg!(target_os = "macos") {
-        return home.map(|h| h.join("Library/Application Support/gen"));
+        return home.map(|h| h.join("Library/Application Support/genealogy-rs"));
     }
-    std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).or_else(|| home.map(|h| h.join(".config"))).map(|d| d.join("gen"))
+    std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).or_else(|| home.map(|h| h.join(".config"))).map(|d| d.join("genealogy-rs"))
 }
 
 fn file() -> Option<PathBuf> {

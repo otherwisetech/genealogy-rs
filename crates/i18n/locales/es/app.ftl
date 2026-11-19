@@ -1,5 +1,5 @@
 # Main window: top bar, tree canvas, ficha, list, notices.
-app.cli.usage = uso: gen [ARCHIVO.ged]\n\nExplora y edita árboles genealógicos GEDCOM.
+app.cli.usage = uso: genealogy-rs [ARCHIVO.ged]\n\nExplora y edita árboles genealógicos GEDCOM.
 app.menu.quit = Salir de gen
 app.file.open_prompt = Abrir GEDCOM
 

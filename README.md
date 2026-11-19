@@ -19,7 +19,7 @@ A fast desktop app to **explore and edit GEDCOM family trees**, written in Rust 
 cargo run -p gen-app --release -- path/to/tree.ged   # or open one from the app with ⌘O
 ```
 
-On macOS, `script/bundle-macos.sh` builds `target/release/gen.app` with the app icon (drag it to
+On macOS, `script/bundle-macos.sh` builds `target/release/genealogy-rs.app` with the app icon (drag it to
 /Applications).
 
 Requires a recent stable Rust. macOS is the primary target (GPUI also supports Linux/Windows).
@@ -44,7 +44,7 @@ The first build compiles GPUI from git and takes a while.
 ```
 crates/i18n      translation catalogs (gen-i18n), embedded at build time
 crates/gedcom    library (gen-gedcom): lossless parser/writer, family-tree model, edits, search — no UI
-crates/gen-app   the `gen` desktop binary (GPUI)
+crates/gen-app   the `genealogy-rs` desktop binary (GPUI)
 ```
 
 The library is UI-free and usable on its own:

@@ -18,7 +18,7 @@ use std::path::PathBuf;
 
 actions!(genealogy, [Quit]);
 
-pub(crate) const APP_NAME: &str = "gen"; // i18n-ok: product name
+pub(crate) const APP_NAME: &str = "genealogy-rs"; // i18n-ok: product name
 
 /// The native menu bar holds plain strings, so it is rebuilt on every language switch.
 pub(crate) fn set_app_menus(cx: &mut App) {

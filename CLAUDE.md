@@ -7,7 +7,7 @@ Read `docs/DESIGN.md` before touching UI.
 ```
 crates/i18n     gen-i18n: embedded translation catalogs, t!/tn!/tv! macros, locale switching, i18n guard tests
 crates/gedcom   gen-gedcom: lossless GEDCOM parser/writer, tree model, edits, search — no UI
-crates/gen-app  `gen` desktop app (GPUI + gpui-component)
+crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component)
 ```
 
 ## Rules
