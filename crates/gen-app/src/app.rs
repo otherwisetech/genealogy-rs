@@ -218,7 +218,15 @@ impl GenApp {
     // ---- update check ----
 
     fn check_updates(&mut self, cx: &mut Context<Self>) {
-        if !self.update_check || !crate::update::due(Settings::load().last_update_check, crate::update::now_secs()) {
+        if !self.update_check {
+            return;
+        }
+        let saved = Settings::load();
+        // a release found earlier keeps being announced until this version catches up
+        if let Some((tag, url)) = saved.update_found.clone().filter(|(tag, _)| crate::update::is_newer(tag, env!("CARGO_PKG_VERSION"))) {
+            self.update = Some(crate::update::Release { tag, url });
+        }
+        if !crate::update::due(saved.last_update_check, crate::update::now_secs()) {
             return;
         }
         let task = cx.background_executor().spawn(async { crate::update::fetch_newer() });
@@ -228,6 +236,9 @@ impl GenApp {
             if !matches!(res, Err(crate::map::net::NetError::Transport(_))) {
                 let mut s = Settings::load();
                 s.last_update_check = Some(crate::update::now_secs());
+                if let Ok(found) = &res {
+                    s.update_found = found.as_ref().map(|r| (r.tag.clone(), r.url.clone()));
+                }
                 s.save();
             }
             match res {

@@ -12,11 +12,13 @@ pub struct Settings {
     pub update_check: bool,
     /// unix seconds of the last answered update check
     pub last_update_check: Option<u64>,
+    /// newer release found by the last check (tag, page), shown again until installed
+    pub update_found: Option<(String, String)>,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { language: None, generations: None, geocode_consent: false, update_check: true, last_update_check: None }
+        Settings { language: None, generations: None, geocode_consent: false, update_check: true, last_update_check: None, update_found: None }
     }
 }
 
@@ -67,6 +69,7 @@ impl Settings {
             geocode_consent: json_bool(s, "geocode_consent").unwrap_or(false),
             update_check: json_bool(s, "update_check").unwrap_or(true),
             last_update_check: json_number(s, "last_update_check"),
+            update_found: json_string(s, "update_tag").zip(json_string(s, "update_url")),
         }
     }
 
@@ -86,6 +89,10 @@ impl Settings {
         }
         if let Some(t) = self.last_update_check {
             fields.push(format!("  \"last_update_check\": {t}"));
+        }
+        if let Some((tag, url)) = &self.update_found {
+            fields.push(format!("  \"update_tag\": \"{}\"", tag.replace(['"', '\\'], "")));
+            fields.push(format!("  \"update_url\": \"{}\"", url.replace(['"', '\\'], "")));
         }
         if fields.is_empty() { "{}\n".into() } else { format!("{{\n{}\n}}\n", fields.join(",\n")) }
     }
@@ -150,7 +157,7 @@ mod tests {
     fn roundtrip() {
         let s = Settings { language: Some("en".into()), ..Settings::default() };
         assert_eq!(Settings::parse(&s.to_json()), s);
-        let s = Settings { language: Some("fr".into()), generations: Some(12), geocode_consent: true, update_check: false, last_update_check: Some(1_790_000_000) };
+        let s = Settings { language: Some("fr".into()), generations: Some(12), geocode_consent: true, update_check: false, last_update_check: Some(1_790_000_000), update_found: Some(("v0.2.0".into(), "https://github.com/otherwisetech/genealogy-rs/releases/tag/v0.2.0".into())) };
         assert_eq!(Settings::parse(&s.to_json()), s);
         let s = Settings { generations: Some(6), last_update_check: Some(42), ..Settings::default() };
         assert_eq!(Settings::parse(&s.to_json()), s);
