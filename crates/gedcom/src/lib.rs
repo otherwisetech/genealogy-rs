@@ -5,6 +5,7 @@
 pub mod date;
 pub mod edit;
 pub mod facts;
+pub mod history;
 pub mod insights;
 pub mod kinship;
 pub mod merge;
@@ -21,6 +22,7 @@ pub use node::{Node, ParseError};
 pub use notes::note_text;
 pub use date::{DateValue, Precision, normalize_date};
 pub use edit::{EventEdit, PersonEdit};
+pub use history::{HistEvent, current_year};
 pub use facts::{FAMILY_EVENT_TAGS, FactEdit, PERSON_EVENT_TAGS};
 pub use insights::{Completeness, Missing, TimelineItem};
 pub use kinship::{KinAlt, KinKind, Kinship, Link};

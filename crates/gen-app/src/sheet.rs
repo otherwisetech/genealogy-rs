@@ -164,47 +164,81 @@ impl GenApp {
 
     fn sheet_timeline(&self, t: &Tokens, p: &Person, cx: &mut Context<Self>) -> impl IntoElement {
         let items = self.tree.timeline(&p.id);
-        let mut list = div().flex().flex_col();
-        let n = items.len();
+        let history = if self.show_history { self.tree.history_for(&p.id, gedcom::current_year()) } else { vec![] };
+        let has_history = !self.tree.history_for(&p.id, gedcom::current_year()).is_empty();
+        // life events in order, each historical event just before the first life event after it
+        enum Row {
+            Life(usize, gedcom::TimelineItem),
+            Hist(gedcom::HistEvent),
+        }
+        let mut rows: Vec<Row> = Vec::new();
+        let mut pending = history.into_iter().peekable();
         for (i, it) in items.into_iter().enumerate() {
-            let head = match it.year {
-                Some(y) => format!("{y} · {}", it.label),
-                None => it.label.clone(),
-            };
-            let detail: AnyElement = if matches!(it.tag.as_str(), "MARR" | "DIV") && it.partner.is_none() {
-                let id = p.id.clone();
-                link(t, ("tl-partner", i), i18n::t!("app.sheet.add_partner")).on_click(cx.listener(move |this, _, window, cx| this.add_and_edit(&id, Rel::Partner, None, window, cx))).into_any_element()
-            } else {
-                let partner = it.partner.as_deref().and_then(|x| self.tree.person(x)).map(|pp| pp.name());
-                let text = match (partner, &it.place) {
-                    (Some(pp), Some(pl)) => Some(format!("{pp} · {pl}")),
-                    (Some(pp), None) => Some(pp),
-                    (None, Some(pl)) => Some(pl.clone()),
-                    (None, None) => None,
-                };
-                match text {
-                    Some(s) => div().text_size(px(12.)).text_color(t.ink_muted).child(s).into_any_element(),
-                    None => div().text_size(px(12.)).italic().text_color(t.ink_muted.opacity(0.75)).child(i18n::t!("app.sheet.no_place")).into_any_element(),
+            if let Some(y) = it.year {
+                while pending.peek().is_some_and(|h| h.year < y) {
+                    rows.push(Row::Hist(pending.next().unwrap()));
                 }
-            };
-            list = list.child(
-                div()
-                    .flex()
-                    .gap(px(12.))
-                    .child(
+            }
+            rows.push(Row::Life(i, it));
+        }
+        rows.extend(pending.map(Row::Hist));
+
+        let mut list = div().flex().flex_col();
+        let n = rows.len();
+        for (r, row) in rows.into_iter().enumerate() {
+            let last = r + 1 == n;
+            let rail = |dot: Div| div().flex().flex_col().items_center().w(px(10.)).child(dot).when(!last, |d| d.child(div().w(px(1.)).flex_1().bg(t.border)));
+            match row {
+                Row::Hist(h) => {
+                    list = list.child(
                         div()
                             .flex()
-                            .flex_col()
-                            .items_center()
-                            .w(px(10.))
-                            .child(div().mt(px(4.)).size(px(9.)).rounded_full().bg(if i == 0 { t.accent } else { t.connector }))
-                            .when(i + 1 < n, |d| d.child(div().w(px(1.)).flex_1().bg(t.border))),
-                    )
-                    .child(div().flex().flex_col().gap(px(2.)).pb(px(14.)).min_w_0().child(div().font_weight(FontWeight::MEDIUM).child(head)).child(detail)),
-            );
+                            .gap(px(12.))
+                            .child(rail(div().mt(px(5.)).size(px(7.)).rounded_full().border_1().border_color(t.ink_muted).bg(t.surface)))
+                            .child(div().pb(px(12.)).min_w_0().text_size(px(12.)).italic().text_color(t.ink_muted).child(format!("{} · {}", h.years(), h.label()))),
+                    );
+                }
+                Row::Life(i, it) => {
+                    let head = match it.year {
+                        Some(y) => format!("{y} · {}", it.label),
+                        None => it.label.clone(),
+                    };
+                    let detail: AnyElement = if matches!(it.tag.as_str(), "MARR" | "DIV") && it.partner.is_none() {
+                        let id = p.id.clone();
+                        link(t, ("tl-partner", i), i18n::t!("app.sheet.add_partner")).on_click(cx.listener(move |this, _, window, cx| this.add_and_edit(&id, Rel::Partner, None, window, cx))).into_any_element()
+                    } else {
+                        let partner = it.partner.as_deref().and_then(|x| self.tree.person(x)).map(|pp| pp.name());
+                        let text = match (partner, &it.place) {
+                            (Some(pp), Some(pl)) => Some(format!("{pp} · {pl}")),
+                            (Some(pp), None) => Some(pp),
+                            (None, Some(pl)) => Some(pl.clone()),
+                            (None, None) => None,
+                        };
+                        match text {
+                            Some(s) => div().text_size(px(12.)).text_color(t.ink_muted).child(s).into_any_element(),
+                            None => div().text_size(px(12.)).italic().text_color(t.ink_muted.opacity(0.75)).child(i18n::t!("app.sheet.no_place")).into_any_element(),
+                        }
+                    };
+                    list = list.child(
+                        div()
+                            .flex()
+                            .gap(px(12.))
+                            .child(rail(div().mt(px(4.)).size(px(9.)).rounded_full().bg(if i == 0 { t.accent } else { t.connector })))
+                            .child(div().flex().flex_col().gap(px(2.)).pb(px(14.)).min_w_0().child(div().font_weight(FontWeight::MEDIUM).child(head)).child(detail)),
+                    );
+                }
+            }
         }
         let body: AnyElement = if n == 0 { div().text_size(px(12.)).text_color(t.ink_muted).child(i18n::t!("app.sheet.no_events")).into_any_element() } else { list.into_any_element() };
-        div().flex().flex_col().gap(px(10.)).child(section_title(t, i18n::t!("app.sheet.timeline"))).child(body)
+        let mut head = div().flex().justify_between().items_center().child(section_title(t, i18n::t!("app.sheet.timeline")));
+        if has_history {
+            let label = if self.show_history { i18n::t!("app.sheet.history_hide") } else { i18n::t!("app.sheet.history_show") };
+            head = head.child(link(t, "history-toggle", label).on_click(cx.listener(|this, _, _, cx| {
+                this.show_history = !this.show_history;
+                cx.notify();
+            })));
+        }
+        div().flex().flex_col().gap(px(10.)).child(head).child(body)
     }
 
     fn person_row(&self, t: &Tokens, key: impl Into<ElementId>, p: &Person, cx: &mut Context<Self>) -> impl IntoElement {

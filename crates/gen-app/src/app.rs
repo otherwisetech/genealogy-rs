@@ -137,6 +137,8 @@ pub struct GenApp {
     pub(crate) armed_delete: Option<String>,
     pub(crate) siblings_expanded: bool,
     pub(crate) notes_expanded: bool,
+    /// historical events interleaved in the sheet's timeline
+    pub(crate) show_history: bool,
     guard: Option<&'static str>,
     toast: Option<Toast>,
     pub(crate) list_scroll: UniformListScrollHandle,
@@ -190,6 +192,7 @@ impl GenApp {
             armed_delete: None,
             siblings_expanded: false,
             notes_expanded: false,
+            show_history: true,
             guard: None,
             toast: None,
             list_scroll: UniformListScrollHandle::new(),
