@@ -16,7 +16,7 @@ impl GenApp {
         let state = if self.dirty { i18n::t!("app.topbar.unsaved") } else { i18n::t!("app.topbar.saved") };
         let subtitle = format!("{} · {} · {state}", i18n::tn!("app.topbar.people", np), i18n::tn!("app.topbar.families", nf));
 
-        let logo = div().flex().flex_none().items_center().justify_center().size(px(32.)).rounded(px(9.)).bg(t.accent).child(icon(IconName::Network, 16., t.on_fill()));
+        let logo = div().flex().flex_none().items_center().justify_center().size(px(32.)).rounded(px(9.)).bg(t.accent).child(svg().path(crate::LOGO_SVG).size(px(20.)).text_color(t.on_fill()));
         let title = div()
             .flex()
             .flex_col()

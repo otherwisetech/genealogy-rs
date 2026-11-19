@@ -25,6 +25,24 @@ pub(crate) fn set_app_menus(cx: &mut App) {
     cx.set_menus(vec![Menu { name: APP_NAME.into(), items: vec![MenuItem::action(i18n::t!("app.menu.quit"), Quit)], disabled: false }]);
 }
 
+/// gpui-component's icon set plus our own `icons/*.svg`.
+struct AppAssets;
+
+impl AssetSource for AppAssets {
+    fn load(&self, path: &str) -> Result<Option<Cow<'static, [u8]>>> {
+        match path {
+            LOGO_SVG => Ok(Some(Cow::Borrowed(include_bytes!("../assets/icons/gen-logo.svg")))),
+            _ => Assets.load(path),
+        }
+    }
+
+    fn list(&self, path: &str) -> Result<Vec<SharedString>> {
+        Assets.list(path)
+    }
+}
+
+pub(crate) const LOGO_SVG: &str = "icons/gen-logo.svg";
+
 const FONTS: [&[u8]; 4] = [
     include_bytes!("../assets/fonts/Inter-Regular.ttf"),
     include_bytes!("../assets/fonts/Inter-Medium.ttf"),
@@ -40,7 +58,7 @@ fn main() {
         return;
     }
     let initial: Option<PathBuf> = arg.map(PathBuf::from);
-    gpui_platform::application().with_assets(Assets).run(move |cx| {
+    gpui_platform::application().with_assets(AppAssets).run(move |cx| {
         if let Err(e) = cx.text_system().add_fonts(FONTS.iter().map(|f| Cow::Borrowed(*f)).collect()) {
             eprintln!("fonts: {e}");
         }

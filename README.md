@@ -1,3 +1,5 @@
+<p align="center"><img src="crates/gen-app/assets/logo/gen-icon-1024.png" width="128" alt=""></p>
+
 # genealogy-rs
 
 A fast desktop app to **explore and edit GEDCOM family trees**, written in Rust with
@@ -16,6 +18,9 @@ A fast desktop app to **explore and edit GEDCOM family trees**, written in Rust 
 ```sh
 cargo run -p gen-app --release -- path/to/tree.ged   # or open one from the app with ⌘O
 ```
+
+On macOS, `script/bundle-macos.sh` builds `target/release/gen.app` with the app icon (drag it to
+/Applications).
 
 Requires a recent stable Rust. macOS is the primary target (GPUI also supports Linux/Windows).
 The first build compiles GPUI from git and takes a while.
