@@ -135,3 +135,5 @@ core.error.bad_level = línea {line}: nivel no válido «{text}»
 core.error.missing_tag = línea {line}: falta la etiqueta
 core.error.orphan_line = línea {line}: línea de nivel {level} fuera de un registro
 core.error.no_record = no existe el registro {id}
+core.error.merge_same = no se puede unir una persona consigo misma
+core.error.merge_related = no se puede unir a {a} con {b}: son pareja o padre/madre e hijo

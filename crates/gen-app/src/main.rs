@@ -2,6 +2,7 @@ mod app;
 mod edit_dialog;
 mod fan;
 mod list;
+mod merge_dialog;
 mod palette;
 mod pedigree;
 mod settings;
@@ -90,6 +91,7 @@ fn main() {
         app::bind_keys(cx);
         edit_dialog::bind_keys(cx);
         palette::bind_keys(cx);
+        merge_dialog::bind_keys(cx);
         cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
         cx.on_action(|_: &Quit, cx| cx.quit());
         gpui_component::set_locale(i18n::locale());

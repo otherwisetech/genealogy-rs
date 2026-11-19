@@ -1,6 +1,6 @@
 //! ⌘K palette (docs/DESIGN.md, artboard 3).
 use crate::theme::{self, Tokens, size};
-use gedcom::{PaletteResults, SearchFilter, Tree, palette_search};
+use gedcom::{PaletteResults, SearchFilter, Tree, merge_search, palette_search};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
 use gpui_component::input::{Input, InputEvent, InputState};
@@ -17,6 +17,8 @@ pub enum PaletteEvent {
     Place(String),
     /// «Crear persona «query»» / ⌘N — the raw query text, host splits it into names
     CreatePerson(String),
+    /// merge-picker mode: the person chosen to merge with the source
+    MergeWith(String),
     /// esc or backdrop click
     Dismiss,
 }
@@ -122,6 +124,10 @@ pub struct Palette {
     results: PaletteResults,
     selected: usize,
     synced_locale: &'static str,
+    /// merge-picker mode: whom we are finding a duplicate of
+    merge_source: Option<String>,
+    /// leading `results.people` entries that are likely duplicates (merge mode)
+    n_candidates: usize,
     _subs: Vec<Subscription>,
 }
 
@@ -144,10 +150,25 @@ impl Palette {
             results: PaletteResults::default(),
             selected: 0,
             synced_locale: "",
+            merge_source: None,
+            n_candidates: 0,
             _subs: subs,
         };
         palette.refresh(cx);
         palette
+    }
+
+    /// Picker for «Unir con otra persona…»: likely duplicates of `source` first, then search.
+    pub fn for_merge(tree: Rc<Tree>, source: String, window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let mut palette = Self::new(tree, Some(source.clone()), window, cx);
+        palette.merge_source = Some(source);
+        palette.refresh(cx);
+        palette
+    }
+
+    /// Rows in display order; the merge picker has no places and no «Crear persona».
+    fn rows(&self, cx: &App) -> Vec<Row> {
+        if self.merge_source.is_some() { rows(&self.results, "") } else { rows(&self.results, &self.query(cx)) }
     }
 
     /// Focus the query input; the host calls this right after opening.
@@ -161,20 +182,28 @@ impl Palette {
 
     fn refresh(&mut self, cx: &mut Context<Self>) {
         let query = self.query(cx);
+        if let Some(src) = &self.merge_source {
+            let r = merge_search(&self.tree, src, query.trim(), LIMIT);
+            self.n_candidates = r.candidates.len();
+            self.results = PaletteResults { people: r.candidates.into_iter().chain(r.people).collect(), places: vec![] };
+            self.selected = 0;
+            cx.notify();
+            return;
+        }
         self.results = palette_search(&self.tree, query.trim(), self.filter, self.focus_person.as_deref(), LIMIT);
         self.selected = 0;
         cx.notify();
     }
 
     fn set_filter(&mut self, filter: SearchFilter, cx: &mut Context<Self>) {
-        if self.filter != filter {
+        if self.filter != filter && self.merge_source.is_none() {
             self.filter = filter;
             self.refresh(cx);
         }
     }
 
     fn move_selection(&mut self, delta: isize, cx: &mut Context<Self>) {
-        let len = rows(&self.results, &self.query(cx)).len();
+        let len = self.rows(cx).len();
         self.selected = wrap(self.selected, len, delta);
         cx.notify();
     }
@@ -183,7 +212,9 @@ impl Palette {
         let ev = match row {
             Row::Person(i) => {
                 let Some(hit) = self.results.people.get(i) else { return };
-                if secondary { PaletteEvent::Edit(hit.id.clone()) } else { PaletteEvent::Focus(hit.id.clone()) }
+                if self.merge_source.is_some() {
+                    PaletteEvent::MergeWith(hit.id.clone())
+                } else if secondary { PaletteEvent::Edit(hit.id.clone()) } else { PaletteEvent::Focus(hit.id.clone()) }
             }
             Row::Place(i) => {
                 let Some(hit) = self.results.places.get(i) else { return };
@@ -195,7 +226,7 @@ impl Palette {
     }
 
     fn confirm(&mut self, secondary: bool, cx: &mut Context<Self>) {
-        let rows = rows(&self.results, &self.query(cx));
+        let rows = self.rows(cx);
         if let Some(row) = rows.get(self.selected).copied() {
             self.activate(row, secondary, cx);
         }
@@ -203,7 +234,7 @@ impl Palette {
 
     fn create(&mut self, cx: &mut Context<Self>) {
         let query = self.query(cx).trim().to_string();
-        if !query.is_empty() {
+        if !query.is_empty() && self.merge_source.is_none() {
             cx.emit(PaletteEvent::CreatePerson(query));
         }
     }
@@ -214,7 +245,7 @@ impl Palette {
         if self.synced_locale != locale {
             let first = self.synced_locale.is_empty();
             self.synced_locale = locale;
-            let text = i18n::t!("dialogs.palette.placeholder");
+            let text = if self.merge_source.is_some() { i18n::t!("dialogs.palette.merge.placeholder") } else { i18n::t!("dialogs.palette.placeholder") };
             self.input.update(cx, |s, cx| s.set_placeholder(text, window, cx));
             if !first {
                 let selected = self.selected;
@@ -274,19 +305,26 @@ impl Palette {
 
     fn render_results(&self, t: &Tokens, cx: &mut Context<Self>) -> impl IntoElement {
         let query = self.query(cx);
-        let all = rows(&self.results, &query);
+        let all = self.rows(cx);
+        let merging = self.merge_source.is_some();
         let section = |text: String| div().px_4().pt_2p5().pb_1().text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).text_color(t.ink_muted).child(text);
         let mut list = v_flex().id("palette-results").max_h(px(420.)).overflow_y_scroll().pb_2();
 
         if all.is_empty() {
             return list.child(div().px_4().py_6().text_center().text_size(px(13.)).text_color(t.ink_muted).child(i18n::t!("dialogs.palette.empty")));
         }
-        if !self.results.people.is_empty() {
+        if !self.results.people.is_empty() && !merging {
             list = list.child(section(i18n::t!("dialogs.palette.section.people", n = self.results.people.len())));
         }
         for (index, row) in all.iter().copied().enumerate() {
             match row {
                 Row::Person(i) => {
+                    if merging && i == 0 && self.n_candidates > 0 {
+                        list = list.child(section(i18n::t!("dialogs.palette.section.duplicates", n = self.n_candidates)));
+                    }
+                    if merging && i == self.n_candidates {
+                        list = list.child(section(i18n::t!("dialogs.palette.section.people", n = self.results.people.len() - self.n_candidates)));
+                    }
                     let hit = &self.results.people[i];
                     let person = self.tree.person(&hit.id);
                     let (bg, fg) = t.sex(person.map(|p| p.sex).unwrap_or_default());
@@ -357,6 +395,8 @@ impl Render for Palette {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.sync_locale(window, cx);
         let t = theme::tokens(cx);
+        let merging = self.merge_source.is_some();
+        let merge_title = self.merge_source.as_deref().and_then(|id| self.tree.person(id)).map(|p| i18n::t!("dialogs.palette.merge.title", name = p.name()));
         let footer = h_flex()
             .gap_3()
             .px_4()
@@ -366,10 +406,13 @@ impl Render for Palette {
             .text_size(px(12.))
             .text_color(t.ink_muted)
             .child(h_flex().gap_1().child(kbd(i18n::t!("dialogs.key.up_down"), &t)).child(i18n::t!("dialogs.palette.footer.move")))
-            .child(h_flex().gap_1().child(kbd(i18n::t!("dialogs.key.enter"), &t)).child(i18n::t!("dialogs.palette.footer.focus")))
-            .child(h_flex().gap_1().child(kbd(i18n::t!("dialogs.key.cmd_enter"), &t)).child(i18n::t!("dialogs.palette.footer.edit")))
-            .child(div().flex_1())
-            .child(h_flex().gap_1().child(kbd(i18n::t!("dialogs.key.tab"), &t)).child(i18n::t!("dialogs.palette.footer.filters")));
+            .when(merging, |d| d.child(h_flex().gap_1().child(kbd(i18n::t!("dialogs.key.enter"), &t)).child(i18n::t!("dialogs.palette.footer.pick"))))
+            .when(!merging, |d| {
+                d.child(h_flex().gap_1().child(kbd(i18n::t!("dialogs.key.enter"), &t)).child(i18n::t!("dialogs.palette.footer.focus")))
+                    .child(h_flex().gap_1().child(kbd(i18n::t!("dialogs.key.cmd_enter"), &t)).child(i18n::t!("dialogs.palette.footer.edit")))
+                    .child(div().flex_1())
+                    .child(h_flex().gap_1().child(kbd(i18n::t!("dialogs.key.tab"), &t)).child(i18n::t!("dialogs.palette.footer.filters")))
+            });
 
         div()
             .absolute()
@@ -413,6 +456,7 @@ impl Render for Palette {
                     .bg(t.surface)
                     .shadow_lg()
                     .occlude()
+                    .when_some(merge_title, |d, title| d.child(div().px_4().pt_3().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).text_color(t.ink).child(title)))
                     .child(
                         h_flex()
                             .gap_2()
@@ -424,7 +468,7 @@ impl Render for Palette {
                             .child(div().flex_1().child(Input::new(&self.input).appearance(false)))
                             .child(kbd(i18n::t!("dialogs.key.esc"), &t)),
                     )
-                    .child(self.render_chips(&t, cx))
+                    .when(!merging, |d| d.child(self.render_chips(&t, cx)))
                     .child(self.render_results(&t, cx))
                     .child(footer),
             )

@@ -3,7 +3,8 @@ use crate::theme::{SANS, Tokens, initials};
 use gedcom::Person;
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::{Icon, IconName};
+use gpui_component::menu::DropdownMenu;
+use gpui_component::{Icon, IconName, Selectable};
 
 /// Round avatar with initials tinted by sex.
 pub fn avatar(t: &Tokens, p: Option<&Person>, size: f32) -> Div {
@@ -48,6 +49,68 @@ pub fn outline_button(t: &Tokens, id: impl Into<ElementId>) -> Stateful<Div> {
         .cursor_pointer()
         .hover(move |s| s.border_color(hover))
 }
+
+/// `outline_button` that opens a gpui-component dropdown menu (`.dropdown_menu(…)`), so menu
+/// triggers match the app's own buttons instead of the library's sizing. Darker border while open.
+pub struct MenuTrigger {
+    base: Stateful<Div>,
+    open: bool,
+    open_border: Hsla,
+}
+
+pub fn menu_trigger(t: &Tokens, id: impl Into<ElementId>) -> MenuTrigger {
+    MenuTrigger { base: outline_button(t, id), open: false, open_border: t.border_strong }
+}
+
+/// Outline menu trigger with a label and a small chevron.
+pub fn menu_button(t: &Tokens, id: impl Into<ElementId>, label: impl Into<SharedString>) -> MenuTrigger {
+    menu_trigger(t, id).child(div().child(label.into())).child(icon(IconName::ChevronDown, 14., t.ink_muted))
+}
+
+/// Square outline menu trigger with only an icon.
+pub fn menu_icon_button(t: &Tokens, id: impl Into<ElementId>, name: IconName) -> MenuTrigger {
+    let mut m = menu_trigger(t, id).child(icon(name, 16., t.ink));
+    m.base = m.base.w(px(36.)).px_0().justify_center();
+    m
+}
+
+impl Styled for MenuTrigger {
+    fn style(&mut self) -> &mut StyleRefinement {
+        self.base.style()
+    }
+}
+
+impl InteractiveElement for MenuTrigger {
+    fn interactivity(&mut self) -> &mut Interactivity {
+        self.base.interactivity()
+    }
+}
+
+impl ParentElement for MenuTrigger {
+    fn extend(&mut self, elements: impl IntoIterator<Item = AnyElement>) {
+        self.base.extend(elements)
+    }
+}
+
+impl Selectable for MenuTrigger {
+    fn selected(mut self, selected: bool) -> Self {
+        self.open = selected;
+        self
+    }
+    fn is_selected(&self) -> bool {
+        self.open
+    }
+}
+
+impl IntoElement for MenuTrigger {
+    type Element = Stateful<Div>;
+    fn into_element(self) -> Self::Element {
+        let border = self.open_border;
+        self.base.when(self.open, |d| d.border_color(border))
+    }
+}
+
+impl DropdownMenu for MenuTrigger {}
 
 /// Filled 36 px control (accent or ink).
 pub fn filled_button(t: &Tokens, id: impl Into<ElementId>, bg: Hsla) -> Stateful<Div> {

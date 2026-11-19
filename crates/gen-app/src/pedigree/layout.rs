@@ -14,8 +14,19 @@ pub const UNION_LABEL_H: f32 = 22.;
 pub const UNION_GAP: f32 = 12.;
 pub const ZOOM_MIN: f32 = 0.25;
 pub const ZOOM_MAX: f32 = 2.0;
-/// hard cap so a huge descendants view stays interactive
+/// hard cap so a huge view (or a pedigree with heavy implex) stays interactive
 pub const MAX_NODES: usize = 3000;
+/// generations shown (focus column included): stepper range and step
+pub const GEN_MIN: usize = 2;
+pub const GEN_MAX: usize = 20;
+pub const GEN_STEP: usize = 2;
+pub const GEN_DEFAULT: usize = 4;
+
+/// Generations after one stepper click (`up` = more), kept within `GEN_MIN..=GEN_MAX`.
+pub fn step_generations(g: usize, up: bool) -> usize {
+    let g = g.clamp(GEN_MIN, GEN_MAX);
+    if up { (g + GEN_STEP).min(GEN_MAX) } else { g.saturating_sub(GEN_STEP).max(GEN_MIN) }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct V2 {
@@ -56,6 +67,8 @@ pub enum Slot {
     Person(String),
     /// dashed «+ Añadir padre/madre» for `child`
     AddParent { child: String, father: bool },
+    /// dashed «+ Añadir hijo» for a focus without children (pedigree children column)
+    AddChild { parent: String },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -70,6 +83,9 @@ pub struct LNode {
     pub h: f32,
     /// descendants view: first child of a union group carries the group's label (other partner)
     pub union_label: Option<Option<String>>,
+    /// pedigree: one of the focus's children, in the column left of the focus (x = −STEP); its
+    /// connector runs from its right edge to the focus's left edge
+    pub child_col: bool,
 }
 
 impl LNode {
@@ -79,7 +95,7 @@ impl LNode {
     pub fn person(&self) -> Option<&str> {
         match &self.slot {
             Slot::Person(id) => Some(id),
-            Slot::AddParent { .. } => None,
+            Slot::AddParent { .. } | Slot::AddChild { .. } => None,
         }
     }
 }
@@ -92,6 +108,8 @@ pub struct Layout {
     /// y of the column headers (world)
     pub header_y: f32,
     pub truncated: bool,
+    /// pedigree: the children column left of the focus is present
+    pub child_col: bool,
 }
 
 /// Spec of the tree before positions are known.
@@ -113,23 +131,31 @@ impl Spec {
 }
 
 /// Ancestors of `focus` for `generations` columns (focus included). Every shown person outside
-/// the last column gets both parent slots: the real parent or an empty «add» slot.
+/// the last column gets both parent slots: the real parent or an empty «add» slot. Only known
+/// people are expanded, so the size follows the data, not 2^generations (capped at `MAX_NODES`
+/// for trees with heavy implex). The focus's children (all unions, in order) are appended as a
+/// column left of the focus, or a single «+ Añadir hijo» slot when there are none.
 pub fn pedigree(tree: &Tree, focus: &str, generations: usize) -> Layout {
     let mut specs: Vec<Spec> = Vec::new();
     if tree.person(focus).is_none() {
         return Layout::default();
     }
     specs.push(Spec::new(Slot::Person(focus.to_string()), 0, None));
+    let mut truncated = false;
     let mut i = 0;
     while i < specs.len() {
         let (depth, id) = match &specs[i].slot {
             Slot::Person(id) => (specs[i].depth, id.clone()),
-            Slot::AddParent { .. } => {
+            _ => {
                 i += 1;
                 continue;
             }
         };
         if depth + 1 < generations {
+            if specs.len() + 2 > MAX_NODES {
+                truncated = true;
+                break;
+            }
             let (f, m) = tree.father_mother(&id);
             for (p, father) in [(f, true), (m, false)] {
                 let slot = match p {
@@ -143,7 +169,35 @@ pub fn pedigree(tree: &Tree, focus: &str, generations: usize) -> Layout {
         }
         i += 1;
     }
-    finish(specs)
+    let mut l = finish(specs);
+    l.truncated = truncated;
+    add_children_column(&mut l, tree, focus);
+    l
+}
+
+/// Children of the focus stacked at x = −STEP, centred on the focus (y = 0).
+fn add_children_column(l: &mut Layout, tree: &Tree, focus: &str) {
+    let mut kids: Vec<Slot> = Vec::new();
+    for (_, _, ks) in tree.unions(focus) {
+        for k in ks {
+            let s = Slot::Person(k.id.clone());
+            if !kids.contains(&s) {
+                kids.push(s);
+            }
+        }
+    }
+    if kids.is_empty() {
+        kids.push(Slot::AddChild { parent: focus.to_string() });
+    }
+    let n = kids.len() as f32;
+    let top = -(n * CARD_H + (n - 1.) * VGAP) / 2.;
+    let mut y = top;
+    for slot in kids {
+        l.nodes.push(LNode { slot, depth: 1, parent: Some(0), pos: v2(-STEP, y), w: CARD_W, h: CARD_H, union_label: None, child_col: true });
+        y += CARD_H + VGAP;
+    }
+    l.header_y = l.header_y.min(top - 36.);
+    l.child_col = true;
 }
 
 /// Descendants of `focus` for `generations` columns, children grouped by union.
@@ -199,11 +253,11 @@ fn finish(specs: Vec<Spec>) -> Layout {
     let nodes: Vec<LNode> = specs
         .into_iter()
         .zip(centre)
-        .map(|(s, cy)| LNode { pos: v2(s.depth as f32 * STEP, cy - s.h / 2.), w: CARD_W, h: s.h, slot: s.slot, depth: s.depth, parent: s.parent, union_label: s.union_label })
+        .map(|(s, cy)| LNode { pos: v2(s.depth as f32 * STEP, cy - s.h / 2.), w: CARD_W, h: s.h, slot: s.slot, depth: s.depth, parent: s.parent, union_label: s.union_label, child_col: false })
         .collect();
     let columns = nodes.iter().map(|n| n.depth + 1).max().unwrap_or(0);
     let top = nodes.iter().map(|n| n.pos.y - if n.union_label.is_some() { UNION_LABEL_H } else { 0. }).fold(f32::INFINITY, f32::min);
-    Layout { nodes, columns, header_y: if top.is_finite() { top - 36. } else { -80. }, truncated: false }
+    Layout { nodes, columns, header_y: if top.is_finite() { top - 36. } else { -80. }, truncated: false, child_col: false }
 }
 
 /// Reingold–Tilford style: each subtree returns its contour (top, bottom) per depth relative to
@@ -284,12 +338,15 @@ impl Layout {
         self.nodes.iter().position(|n| n.person() == Some(id))
     }
 
-    /// Cubic connector from `node`'s parent (left) to `node` (right): start, ctrl1, ctrl2, end.
+    /// Cubic connector between `node` and its parent, always left → right: from the parent's right
+    /// edge to `node`'s left edge, or, in the children column, from `node`'s right edge to the
+    /// focus's left edge. Start, ctrl1, ctrl2, end.
     pub fn connector(&self, node: usize) -> Option<[V2; 4]> {
         let n = self.nodes.get(node)?;
         let p = &self.nodes[n.parent?];
-        let a = v2(p.pos.x + p.w, p.pos.y + p.h / 2.);
-        let b = v2(n.pos.x, n.pos.y + n.h / 2.);
+        let (l, r) = if n.child_col { (n, p) } else { (p, n) };
+        let a = v2(l.pos.x + l.w, l.pos.y + l.h / 2.);
+        let b = v2(r.pos.x, r.pos.y + r.h / 2.);
         let mx = (a.x + b.x) / 2.;
         Some([a, v2(mx, a.y), v2(mx, b.y), b])
     }
@@ -355,7 +412,7 @@ pub fn minimap_transform(bounds: Rect, size: V2, pad: f32) -> (f32, V2) {
 
 #[cfg(test)]
 mod tests {
-    use super::{CARD_H, CARD_W, FOCUS_H, Layout, Rect, STEP, Slot, VGAP, View, descendants, ease_out_cubic, minimap_transform, pedigree, v2};
+    use super::{CARD_H, CARD_W, FOCUS_H, GEN_MAX, GEN_MIN, Layout, MAX_NODES, Rect, STEP, Slot, VGAP, View, descendants, ease_out_cubic, minimap_transform, pedigree, step_generations, v2};
     use gedcom::{Sex, Tree};
 
     /// focus F with parents P1/P2; P1 has father G1 only.
@@ -380,8 +437,8 @@ mod tests {
         let (t, f) = small();
         let l = pedigree(&t, &f, 3);
         assert_eq!(l.columns, 3);
-        // focus + 2 parents + 4 grandparent slots
-        assert_eq!(l.nodes.len(), 7);
+        // focus + 2 parents + 4 grandparent slots + the «add child» slot
+        assert_eq!(l.nodes.len(), 8);
         assert_eq!(l.nodes[0].h, FOCUS_H);
         assert_eq!(centre_y(&l, 0), 0.);
         assert_eq!(l.nodes[1].pos.x, STEP);
@@ -396,7 +453,7 @@ mod tests {
         let (t, f) = small();
         let l = pedigree(&t, &f, 4);
         for (i, n) in l.nodes.iter().enumerate() {
-            let kids: Vec<usize> = l.nodes.iter().enumerate().filter(|(_, c)| c.parent == Some(i)).map(|(j, _)| j).collect();
+            let kids: Vec<usize> = l.nodes.iter().enumerate().filter(|(_, c)| c.parent == Some(i) && !c.child_col).map(|(j, _)| j).collect();
             if kids.len() == 2 {
                 let mid = (centre_y(&l, kids[0]) + centre_y(&l, kids[1])) / 2.;
                 assert!((mid - (n.pos.y + n.h / 2.)).abs() < 0.01);
@@ -404,7 +461,7 @@ mod tests {
             }
         }
         for d in 0..l.columns {
-            let mut col: Vec<_> = l.nodes.iter().filter(|n| n.depth == d).collect();
+            let mut col: Vec<_> = l.nodes.iter().filter(|n| n.depth == d && !n.child_col).collect();
             col.sort_by(|a, b| a.pos.y.total_cmp(&b.pos.y));
             for w in col.windows(2) {
                 assert!(w[1].pos.y - (w[0].pos.y + w[0].h) >= VGAP - 0.01);
@@ -424,6 +481,113 @@ mod tests {
         assert_eq!(c2.y, b.y);
         assert!(l.connector(0).is_none());
         assert_eq!(l.path_to_root(2), vec![2, 0]);
+    }
+
+    #[test]
+    fn pedigree_children_column() {
+        let (mut t, f) = small();
+        let l = pedigree(&t, &f, 2);
+        let kids: Vec<_> = l.nodes.iter().filter(|n| n.child_col).collect();
+        assert_eq!(kids.len(), 1);
+        assert_eq!(kids[0].slot, Slot::AddChild { parent: f.clone() });
+        assert_eq!(kids[0].pos.x, -STEP);
+        assert!(l.child_col);
+
+        // two unions: children in union order, stacked and centred on the focus
+        let a = t.add_person("A", "Z", Sex::Male);
+        let b = t.add_person("B", "W", Sex::Male);
+        let f1 = t.add_partner_link(&f, &a).unwrap();
+        let f2 = t.add_partner_link(&f, &b).unwrap();
+        let k1 = t.add_person("K1", "Z", Sex::Male);
+        let k2 = t.add_person("K2", "Z", Sex::Female);
+        let k3 = t.add_person("K3", "W", Sex::Female);
+        t.add_child_link(&f, &k1, Some(&f1)).unwrap();
+        t.add_child_link(&f, &k2, Some(&f1)).unwrap();
+        t.add_child_link(&f, &k3, Some(&f2)).unwrap();
+        let l = pedigree(&t, &f, 3);
+        let ix: Vec<usize> = (0..l.nodes.len()).filter(|&i| l.nodes[i].child_col).collect();
+        let ids: Vec<_> = ix.iter().map(|&i| l.nodes[i].person().unwrap().to_string()).collect();
+        assert_eq!(ids, vec![k1.clone(), k2, k3]);
+        assert_eq!(l.columns, 3, "the children column is not a generation");
+        assert!((centre_y(&l, ix[0]) + centre_y(&l, ix[2])).abs() < 0.01);
+        for w in ix.windows(2) {
+            let (a, b) = (&l.nodes[w[0]], &l.nodes[w[1]]);
+            assert!((b.pos.y - (a.pos.y + a.h) - VGAP).abs() < 0.01);
+        }
+        assert!(l.header_y < l.nodes[ix[0]].pos.y);
+        // ancestors keep their indices; the children come last
+        assert_eq!(l.nodes[1].person(), t.father_mother(&f).0.map(|p| p.id.as_str()));
+        assert_eq!(l.index_of(&k1), Some(ix[0]));
+
+        // connector: child's right edge → focus's left edge, still left to right
+        let [a, c1, c2, b] = l.connector(ix[0]).unwrap();
+        assert_eq!(a, v2(-STEP + CARD_W, centre_y(&l, ix[0])));
+        assert_eq!(b, v2(0., 0.));
+        assert_eq!((c1.x, c1.y), ((a.x + b.x) / 2., a.y));
+        assert_eq!((c2.x, c2.y), ((a.x + b.x) / 2., 0.));
+        assert_eq!(l.path_to_root(ix[1]), vec![ix[1], 0]);
+        let bb = l.bounds();
+        assert_eq!(bb.min.x, -STEP);
+        assert!(bb.min.y <= l.nodes[ix[0]].pos.y);
+    }
+
+    #[test]
+    fn generations_stepper() {
+        assert_eq!(step_generations(4, true), 6);
+        assert_eq!(step_generations(4, false), 2);
+        assert_eq!(step_generations(GEN_MIN, false), GEN_MIN);
+        assert_eq!(step_generations(GEN_MAX, true), GEN_MAX);
+        assert_eq!(step_generations(19, true), GEN_MAX);
+        assert_eq!(step_generations(99, false), GEN_MAX - 2);
+        let mut g = GEN_MIN;
+        let mut seen = vec![g];
+        while g < GEN_MAX {
+            g = step_generations(g, true);
+            seen.push(g);
+        }
+        assert_eq!(seen, (GEN_MIN..=GEN_MAX).step_by(2).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn deep_pedigree_only_expands_known_people() {
+        // a straight paternal line of 30 men: 20 generations show 20 people + their empty slots
+        let mut t = Tree::new_empty();
+        let mut cur = t.add_person("L0", "X", Sex::Male);
+        let focus = cur.clone();
+        for i in 1..30 {
+            let p = t.add_person(&format!("L{i}"), "X", Sex::Male);
+            t.add_parent_link(&cur, &p).unwrap();
+            cur = p;
+        }
+        let l = pedigree(&t, &focus, GEN_MAX);
+        assert_eq!(l.columns, GEN_MAX);
+        let people = l.nodes.iter().filter(|n| n.person().is_some()).count();
+        assert_eq!(people, GEN_MAX);
+        // 19 empty mothers + 1 «add child»
+        assert_eq!(l.nodes.len(), 2 * GEN_MAX);
+        assert!(!l.truncated);
+    }
+
+    #[test]
+    fn implex_pedigree_is_capped() {
+        // every generation is one couple, parents of the couple below: each person is shown
+        // 2^depth times, so 20 generations would be ~1M cards without the cap
+        let mut t = Tree::new_empty();
+        let focus = t.add_person("F", "X", Sex::Female);
+        let (mut f, mut m) = (t.add_person("A0", "X", Sex::Male), t.add_person("B0", "Y", Sex::Female));
+        t.add_parent_link(&focus, &f).unwrap();
+        t.add_parent_link(&focus, &m).unwrap();
+        for i in 1..GEN_MAX {
+            let (nf, nm) = (t.add_person(&format!("A{i}"), "X", Sex::Male), t.add_person(&format!("B{i}"), "Y", Sex::Female));
+            for c in [&f, &m] {
+                t.add_parent_link(c, &nf).unwrap();
+                t.add_parent_link(c, &nm).unwrap();
+            }
+            (f, m) = (nf, nm);
+        }
+        let l = pedigree(&t, &focus, GEN_MAX);
+        assert!(l.truncated);
+        assert!(l.nodes.len() <= MAX_NODES + 1);
     }
 
     #[test]

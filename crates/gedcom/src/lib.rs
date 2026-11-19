@@ -5,6 +5,7 @@
 pub mod date;
 pub mod edit;
 pub mod insights;
+pub mod merge;
 pub mod node;
 pub mod search;
 pub mod tree;
@@ -13,7 +14,7 @@ pub use node::{Node, ParseError};
 pub use date::{DateValue, Precision, normalize_date};
 pub use edit::{EventEdit, PersonEdit};
 pub use insights::{Completeness, Missing, TimelineItem};
-pub use search::{PaletteResults, PersonHit, PlaceHit, SearchFilter, fold, palette_search, search};
+pub use search::{MergeResults, PaletteResults, PersonHit, PlaceHit, SearchFilter, fold, merge_search, palette_search, search};
 pub use tree::{EditError, Event, Family, Person, Sex, Tree, year_of};
 
 /// Read a GEDCOM file. UTF-8 (with or without BOM) is expected; invalid bytes are replaced

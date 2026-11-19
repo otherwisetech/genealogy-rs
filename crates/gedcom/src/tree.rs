@@ -20,7 +20,7 @@ impl Sex {
             Sex::Unknown => "U",
         }
     }
-    fn parse(v: &str) -> Sex {
+    pub(crate) fn parse(v: &str) -> Sex {
         match v.trim().chars().next() {
             Some('M' | 'm') => Sex::Male,
             Some('F' | 'f') => Sex::Female,
@@ -146,7 +146,7 @@ impl Family {
 
 #[derive(Debug, Clone, Default)]
 pub struct Tree {
-    records: Vec<Node>,
+    pub(crate) records: Vec<Node>,
     format: Format,
     rec_ix: HashMap<String, usize>,
     pub people: HashMap<String, Person>,
@@ -159,6 +159,11 @@ pub struct Tree {
 pub enum EditError {
     #[error("{}", i18n::t!("core.error.no_record", id = .0))]
     NotFound(String),
+    #[error("{}", i18n::t!("core.error.merge_same"))]
+    MergeSame,
+    /// display names of the two people
+    #[error("{}", i18n::t!("core.error.merge_related", a = .0, b = .1))]
+    MergeRelated(String, String),
 }
 
 impl Tree {
@@ -409,7 +414,7 @@ impl Tree {
     }
 
     /// Re-derives the record index after inserts (positions shift).
-    fn reix(&mut self) {
+    pub(crate) fn reix(&mut self) {
         self.rec_ix = self.records.iter().enumerate().filter_map(|(i, r)| Some((r.xref.clone()?, i))).collect();
     }
 

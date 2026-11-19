@@ -193,29 +193,7 @@ pub fn palette_search(tree: &Tree, query: &str, filter: SearchFilter, focus: Opt
             })
             .collect();
         ranked.sort();
-        res.people = ranked
-            .into_iter()
-            .take(limit)
-            .map(|(_, _, id)| {
-                let p = &tree.people[id];
-                let name = p.name();
-                let name_hl = Folded::new(&name).highlights(&toks);
-                let mut sub = p.lifespan();
-                let rel = match (focus, &focus_name) {
-                    (Some(f), _) if f == id => tree.relationship(f, id),
-                    (Some(f), Some(n)) => tree.relationship(f, id).map(|r| i18n::tv!("core.palette.relation", n, rel = r, name = n)),
-                    _ => None,
-                };
-                if let Some(r) = rel {
-                    if !sub.is_empty() {
-                        sub.push_str(" · ");
-                    }
-                    sub.push_str(&r);
-                }
-                let sub_hl = Folded::new(&sub).highlights(&years);
-                PersonHit { id: id.to_string(), name, name_hl, sub, sub_hl }
-            })
-            .collect();
+        res.people = ranked.into_iter().take(limit).map(|(_, _, id)| person_hit(tree, id, &toks, &years, focus, focus_name.as_deref())).collect();
     }
 
     let places_allowed = match filter {
@@ -233,6 +211,46 @@ pub fn palette_search(tree: &Tree, query: &str, filter: SearchFilter, focus: Opt
             .collect();
     }
     res
+}
+
+fn person_hit(tree: &Tree, id: &str, toks: &[&str], years: &[&str], focus: Option<&str>, focus_name: Option<&str>) -> PersonHit {
+    let p = &tree.people[id];
+    let name = p.name();
+    let name_hl = Folded::new(&name).highlights(toks);
+    let mut sub = p.lifespan();
+    let rel = match (focus, focus_name) {
+        (Some(f), _) if f == id => tree.relationship(f, id),
+        (Some(f), Some(n)) => tree.relationship(f, id).map(|r| i18n::tv!("core.palette.relation", n, rel = r, name = n)),
+        _ => None,
+    };
+    if let Some(r) = rel {
+        if !sub.is_empty() {
+            sub.push_str(" · ");
+        }
+        sub.push_str(&r);
+    }
+    let sub_hl = Folded::new(&sub).highlights(years);
+    PersonHit { id: id.to_string(), name, name_hl, sub, sub_hl }
+}
+
+/// Picker results when choosing whom to merge `source` with: likely duplicates first (matching
+/// the query, if any), then the other search hits. People `source` can't be merged with
+/// (itself, partners, parents, children) are left out.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct MergeResults {
+    pub candidates: Vec<PersonHit>,
+    pub people: Vec<PersonHit>,
+}
+
+pub fn merge_search(tree: &Tree, source: &str, query: &str, limit: usize) -> MergeResults {
+    let q = fold(query);
+    let toks = tokens(&q);
+    let years: Vec<&str> = toks.iter().copied().filter(|t| t.chars().all(|c| c.is_ascii_digit())).collect();
+    let focus_name = tree.person(source).map(|p| p.given.split_whitespace().next().map(str::to_string).unwrap_or_else(|| p.name()));
+    let hit = |id: &str| person_hit(tree, id, &toks, &years, Some(source), focus_name.as_deref());
+    let cands: Vec<String> = tree.duplicate_candidates(source).into_iter().map(|(id, _)| id).filter(|id| words_match(&tree.people[id].search_key, &toks)).take(limit).collect();
+    let people = search(tree, query).into_iter().filter(|id| !cands.iter().any(|c| c == id) && tree.can_merge(source, id).is_ok()).take(limit).map(&hit).collect();
+    MergeResults { candidates: cands.iter().map(|id| hit(id)).collect(), people }
 }
 
 #[cfg(test)]
@@ -305,5 +323,18 @@ mod palette_tests {
         assert_eq!(r.people[0].sub, "1790 – 1852 · father of Rosa");
         assert_eq!(hl(&r.people[0].sub, &r.people[0].sub_hl), vec!["1852"]);
         i18n::set_locale("es");
+    }
+
+    #[test]
+    fn merge_picker_results() {
+        let src = "0 HEAD\n0 @I1@ INDI\n1 NAME Elena /Varela/\n1 FAMS @F1@\n0 @I2@ INDI\n1 NAME Helena /Varela/\n0 @I3@ INDI\n1 NAME Marco /Soto/\n1 FAMS @F1@\n0 @I4@ INDI\n1 NAME Elena /Soto/\n0 @F1@ FAM\n1 HUSB @I3@\n1 WIFE @I1@\n0 TRLR\n";
+        let t = Tree::parse(src).unwrap();
+        let ids = |v: &[PersonHit]| v.iter().map(|h| h.id.clone()).collect::<Vec<_>>();
+        let r = merge_search(&t, "I1", "", 10);
+        assert_eq!(ids(&r.candidates), vec!["I2"]);
+        assert_eq!(ids(&r.people), vec!["I4"], "self, candidates and partner left out");
+        let r = merge_search(&t, "I1", "soto", 10);
+        assert!(r.candidates.is_empty());
+        assert_eq!(ids(&r.people), vec!["I4"]);
     }
 }

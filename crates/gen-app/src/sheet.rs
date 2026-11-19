@@ -5,9 +5,8 @@ use crate::ui::{self, avatar, chip, section_title};
 use gedcom::{Person, Sex};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::button::Button;
 use gpui_component::menu::{DropdownMenu as _, PopupMenuItem};
-use gpui_component::{IconName, Sizable as _};
+use gpui_component::IconName;
 
 const SIBLING_AVATARS: usize = 5;
 
@@ -55,7 +54,7 @@ impl GenApp {
         };
         let id = p.id.clone();
         let weak = cx.entity().downgrade();
-        let add_menu = Button::new("add-relative").outline().label(i18n::t!("app.sheet.add_relative")).dropdown_caret(true).with_size(size::CONTROL_H).dropdown_menu({
+        let add_menu = ui::menu_button(t, "add-relative", i18n::t!("app.sheet.add_relative")).dropdown_menu({
             let (id, weak) = (id.clone(), weak.clone());
             move |mut menu, _, _| {
                 for (key, rel) in [("app.rel.father", Rel::Father), ("app.rel.mother", Rel::Mother), ("app.rel.partner", Rel::Partner), ("app.rel.son", Rel::Son), ("app.rel.daughter", Rel::Daughter)] {
@@ -67,12 +66,16 @@ impl GenApp {
                 menu
             }
         });
-        let more = Button::new("more").outline().icon(IconName::Ellipsis).with_size(size::CONTROL_H).dropdown_menu_with_anchor(Anchor::TopRight, {
+        let more = ui::menu_icon_button(t, "more", IconName::Ellipsis).dropdown_menu_with_anchor(Anchor::TopRight, {
             let (id, weak) = (id.clone(), weak.clone());
             move |menu, _, _| {
                 let (id1, w1, id2, w2) = (id.clone(), weak.clone(), id.clone(), weak.clone());
+                let (id3, w3) = (id.clone(), weak.clone());
                 menu.item(PopupMenuItem::new(i18n::t!("app.sheet.view_gedcom")).on_click(move |_, window, cx| {
                     w1.update(cx, |this, cx| this.show_raw(id1.clone(), window, cx)).ok();
+                }))
+                .item(PopupMenuItem::new(i18n::t!("app.sheet.merge")).on_click(move |_, window, cx| {
+                    w3.update(cx, |this, cx| this.open_merge_picker(id3.clone(), window, cx)).ok();
                 }))
                 .item(PopupMenuItem::new(i18n::t!("app.sheet.delete")).on_click(move |_, _, cx| {
                     w2.update(cx, |this, cx| {
@@ -96,6 +99,7 @@ impl GenApp {
             .child(
                 div()
                     .flex()
+                    .items_center()
                     .gap(px(8.))
                     .mt(px(4.))
                     .child(ui::filled_button(t, "edit", t.ink).child(i18n::t!("app.sheet.edit")).on_click(cx.listener({

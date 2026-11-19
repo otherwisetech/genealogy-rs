@@ -1,4 +1,5 @@
 use crate::edit_dialog::{EditDialog, EditDialogEvent};
+use crate::merge_dialog::{MergeDialog, MergeDialogEvent};
 use crate::palette::{Palette, PaletteEvent};
 use crate::pedigree::layout::{self, Layout, V2, View, v2};
 use crate::settings::Settings;
@@ -14,7 +15,7 @@ use std::time::{Duration, Instant};
 
 actions!(
     gen_app,
-    [Open, Save, SaveAs, NewTree, Undo, Redo, OpenPalette, Back, NavLeft, NavRight, NavUp, NavDown, CenterFocus, EditFocus, ZoomIn, ZoomOut, ZoomReset, FitView, CloseRaw]
+    [Open, Save, SaveAs, NewTree, Undo, Redo, OpenPalette, Back, NavLeft, NavRight, NavUp, NavDown, CenterFocus, EditFocus, ZoomIn, ZoomOut, ZoomReset, FitView, CloseRaw, MoreGenerations, FewerGenerations]
 );
 
 const KEY_CONTEXT: &str = "GenApp";
@@ -50,6 +51,10 @@ pub fn bind_keys(cx: &mut App) {
         KeyBinding::new("cmd--", ZoomOut, c),
         KeyBinding::new("cmd-0", ZoomReset, c),
         KeyBinding::new("cmd-9", FitView, c),
+        // ⌘⇧= is ⌘+ (zoom in) on many layouts, so generations get the bare keys
+        KeyBinding::new("=", MoreGenerations, c),
+        KeyBinding::new("+", MoreGenerations, c),
+        KeyBinding::new("-", FewerGenerations, c),
         KeyBinding::new("escape", CloseRaw, Some(RAW_CONTEXT)),
     ]);
 }
@@ -80,6 +85,8 @@ pub(crate) struct Toast {
     key: &'static str,
     arg: String,
     at: Instant,
+    /// show a «Deshacer» action
+    undo: bool,
 }
 
 struct Anim {
@@ -117,6 +124,7 @@ pub struct GenApp {
     pub(crate) hovered: Option<(usize, Instant)>,
     pub(crate) edit_dialog: Option<Entity<EditDialog>>,
     pub(crate) palette: Option<Entity<Palette>>,
+    pub(crate) merge_dialog: Option<Entity<MergeDialog>>,
     /// id whose raw GEDCOM record is shown
     pub(crate) raw: Option<String>,
     raw_focus: FocusHandle,
@@ -154,7 +162,7 @@ impl GenApp {
             focus_id: None,
             trail: vec![],
             tab: Tab::Pedigree,
-            generations: 4,
+            generations: Settings::load().generations.map_or(layout::GEN_DEFAULT, |g| g.clamp(layout::GEN_MIN, layout::GEN_MAX)),
             view: View::default(),
             anim: None,
             needs_center: true,
@@ -164,6 +172,7 @@ impl GenApp {
             hovered: None,
             edit_dialog: None,
             palette: None,
+            merge_dialog: None,
             raw: None,
             raw_focus: cx.focus_handle(),
             armed_delete: None,
@@ -186,7 +195,11 @@ impl GenApp {
     // ---- notices ----
 
     pub(crate) fn toast(&mut self, key: &'static str, arg: impl Into<String>, cx: &mut Context<Self>) {
-        self.toast = Some(Toast { key, arg: arg.into(), at: Instant::now() });
+        self.show_toast(key, arg.into(), false, cx);
+    }
+
+    fn show_toast(&mut self, key: &'static str, arg: String, undo: bool, cx: &mut Context<Self>) {
+        self.toast = Some(Toast { key, arg, at: Instant::now(), undo });
         cx.spawn(async move |this, cx| {
             cx.background_executor().timer(TOAST_FOR + Duration::from_millis(50)).await;
             this.update(cx, |this, cx| {
@@ -366,7 +379,7 @@ impl GenApp {
     }
 
     pub(crate) fn undo(&mut self, redo: bool, window: &mut Window, cx: &mut Context<Self>) {
-        if self.edit_dialog.is_some() || self.palette.is_some() {
+        if self.edit_dialog.is_some() || self.palette.is_some() || self.merge_dialog.is_some() {
             return;
         }
         let (from, to) = if redo { (&mut self.redo, &mut self.undo) } else { (&mut self.undo, &mut self.redo) };
@@ -466,6 +479,20 @@ impl GenApp {
             }
         }
         self.toast("app.toast.deleted", "", cx);
+    }
+
+    /// Fold `dup` into `keep` as one undo step, then focus `keep`.
+    pub(crate) fn merge_persons(&mut self, keep: String, dup: String, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.edit(window, cx, |t| t.merge_persons(&keep, &dup).map(|_| true)) {
+            return;
+        }
+        self.armed_delete = None;
+        self.trail.retain(|b| *b != dup);
+        if self.focus_id.as_deref() == Some(dup.as_str()) {
+            self.focus_id = None;
+        }
+        self.focus_from_outside(keep, window, cx);
+        self.show_toast("app.toast.merged", String::new(), true, cx);
     }
 
     // ---- focus & navigation ----
@@ -581,6 +608,21 @@ impl GenApp {
         }
     }
 
+    /// Generations stepper (canvas pill, `+` / `−` keys); the choice is remembered.
+    pub(crate) fn step_generations(&mut self, up: bool, window: &mut Window, cx: &mut Context<Self>) {
+        let g = layout::step_generations(self.generations, up);
+        if g == self.generations {
+            return;
+        }
+        self.generations = g;
+        self.hovered = None;
+        let mut s = Settings::load();
+        s.generations = Some(g);
+        s.save();
+        self.recenter(true, window);
+        cx.notify();
+    }
+
     pub(crate) fn layout(&mut self) -> Rc<Layout> {
         let key = (self.rev, self.focus_id.clone(), self.generations, self.tab);
         if let Some((k, l)) = &self.layout_cache
@@ -690,8 +732,43 @@ impl GenApp {
         cx.notify();
     }
 
+    /// «Unir con otra persona…»: the palette in picker mode, then the confirmation dialog.
+    pub(crate) fn open_merge_picker(&mut self, source: String, window: &mut Window, cx: &mut Context<Self>) {
+        if self.tree.person(&source).is_none() {
+            return;
+        }
+        self.close_overlays(window, cx);
+        let palette = cx.new(|cx| Palette::for_merge(self.tree.clone(), source.clone(), window, cx));
+        self.overlay_subs = vec![cx.subscribe_in(&palette, window, move |this, _, ev: &PaletteEvent, window, cx| match ev {
+            PaletteEvent::MergeWith(other) => {
+                let other = other.clone();
+                this.open_merge_confirm(source.clone(), other, window, cx);
+            }
+            _ => this.close_overlays(window, cx),
+        })];
+        palette.update(cx, |p, cx| p.focus(window, cx));
+        self.palette = Some(palette);
+        cx.notify();
+    }
+
+    pub(crate) fn open_merge_confirm(&mut self, keep: String, dup: String, window: &mut Window, cx: &mut Context<Self>) {
+        self.close_overlays(window, cx);
+        let dialog = cx.new(|cx| MergeDialog::new(self.tree.clone(), keep, dup, cx));
+        self.overlay_subs = vec![cx.subscribe_in(&dialog, window, |this, _, ev: &MergeDialogEvent, window, cx| match ev {
+            MergeDialogEvent::Confirm { keep, dup } => {
+                let (keep, dup) = (keep.clone(), dup.clone());
+                this.close_overlays(window, cx);
+                this.merge_persons(keep, dup, window, cx);
+            }
+            MergeDialogEvent::Cancel => this.close_overlays(window, cx),
+        })];
+        dialog.update(cx, |d, cx| d.focus(window, cx));
+        self.merge_dialog = Some(dialog);
+        cx.notify();
+    }
+
     pub(crate) fn open_palette(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        if self.edit_dialog.is_some() {
+        if self.edit_dialog.is_some() || self.merge_dialog.is_some() {
             return;
         }
         if let Some(p) = &self.palette {
@@ -725,6 +802,7 @@ impl GenApp {
                 this.close_overlays(window, cx);
                 this.create_person(&given, &surname, window, cx);
             }
+            PaletteEvent::MergeWith(_) => {}
             PaletteEvent::Dismiss => this.close_overlays(window, cx),
         })];
         palette.update(cx, |p, cx| p.focus(window, cx));
@@ -744,6 +822,7 @@ impl GenApp {
     pub(crate) fn close_overlays(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.edit_dialog = None;
         self.palette = None;
+        self.merge_dialog = None;
         self.raw = None;
         self.overlay_subs.clear();
         self.restore_focus(window, cx);
@@ -775,7 +854,9 @@ impl GenApp {
 
     pub(crate) fn set_language(&mut self, code: &'static str, window: &mut Window, cx: &mut Context<Self>) {
         if i18n::set_locale(code) {
-            Settings { language: Some(code.to_string()) }.save();
+            let mut s = Settings::load();
+            s.language = Some(code.to_string());
+            s.save();
             gpui_component::set_locale(code);
             crate::set_app_menus(cx);
             self.rev += 1;
@@ -834,7 +915,30 @@ impl Render for GenApp {
                 .right_0()
                 .flex()
                 .justify_center()
-                .child(div().px(px(16.)).py(px(10.)).rounded(px(12.)).bg(t.ink).text_color(t.on_fill()).text_size(px(13.)).child(i18n::tr(toast.key, &[("arg", &toast.arg)])))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(14.))
+                        .px(px(16.))
+                        .py(px(10.))
+                        .rounded(px(12.))
+                        .bg(t.ink)
+                        .text_color(t.on_fill())
+                        .text_size(px(13.))
+                        .child(i18n::tr(toast.key, &[("arg", &toast.arg)]))
+                        .when(toast.undo, |d| {
+                            d.child(
+                                div()
+                                    .id("toast-undo")
+                                    .font_weight(FontWeight::SEMIBOLD)
+                                    .cursor_pointer()
+                                    .hover(|s| s.underline())
+                                    .child(i18n::t!("app.toast.undo"))
+                                    .on_click(cx.listener(|this, _, window, cx| this.undo(false, window, cx))),
+                            )
+                        }),
+                )
         });
         div()
             .key_context(KEY_CONTEXT)
@@ -875,11 +979,14 @@ impl Render for GenApp {
                 this.zoom_by(z, None, window)
             }))
             .on_action(cx.listener(|this, _: &FitView, window, _| this.fit_view(window)))
+            .on_action(cx.listener(|this, _: &MoreGenerations, window, cx| this.step_generations(true, window, cx)))
+            .on_action(cx.listener(|this, _: &FewerGenerations, window, cx| this.step_generations(false, window, cx)))
             .child(self.render_topbar(window, cx))
             .child(div().flex().flex_row().flex_1().min_h_0().child(div().flex_1().min_w_0().h_full().child(main)).child(self.render_sheet(window, cx)))
             .children(toast)
             .when_some(self.palette.clone(), |d, p| d.child(p))
             .when_some(self.edit_dialog.clone(), |d, e| d.child(e))
+            .when_some(self.merge_dialog.clone(), |d, m| d.child(m))
             .when_some(self.raw.clone(), |d, id| d.child(self.render_raw(&id, cx)))
     }
 }

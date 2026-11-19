@@ -136,3 +136,5 @@ core.error.bad_level = ligne {line} : niveau invalide « {text} »
 core.error.missing_tag = ligne {line} : balise manquante
 core.error.orphan_line = ligne {line} : ligne de niveau {level} hors de tout enregistrement
 core.error.no_record = l'enregistrement {id} n'existe pas
+core.error.merge_same = impossible de fusionner une personne avec elle-même
+core.error.merge_related = impossible de fusionner {a} avec {b} : ce sont des partenaires ou un parent et son enfant

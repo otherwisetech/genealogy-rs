@@ -74,9 +74,12 @@ avatar "?") · Empty slot («+ Añadir madre», dashed; hover → accent).
 - Hover ≥300 ms → quick actions (+ padre, + pareja, + hijo).
 - Arrows move between relatives (canvas focused):
   - Pedigrí: → father (mother if no father) · ← back to the child you came from (else the first
-    child) · ↑/↓ switch between the two parents of that child; otherwise previous/next sibling.
+    child, i.e. the top card of the «Hijos» column) · ↑/↓ switch between the two parents of that
+    child; otherwise previous/next sibling.
   - Descendientes: → first child · ← a parent · ↑/↓ previous/next sibling.
 - F centers the focus; ⌘= / ⌘− / ⌘0 zoom in / out / 100 %; ⌘9 fits the whole tree.
+- `+` (or `=`) / `−` (canvas focused) show two generations more / fewer, like the pill stepper
+  (bare keys because ⌘⇧= is ⌘+ = zoom on most layouts).
 - Changing focus updates the breadcrumb (history; ⌘[ or ⌫ goes back, a crumb click jumps there).
 - The recenter after a click waits ~250 ms so a double-click still lands on the same card.
 - Quick actions show «+ padre» (or «+ madre» if only the father is known, nothing if both are),
@@ -91,17 +94,29 @@ año» with ⌘K hint (opens the palette) · undo, redo icons · «Exportar GEDC
 «+ Persona» accent button.
 
 **Canvas overlays:** top-left breadcrumb pill «Juan de Dios › Miguel › Ramona» (clickable);
-generations pill «Generaciones 3 4 5 6» (selected is a dark filled circle). Column headers above
-each generation: «Persona en foco», «Padres», «Abuelos», «Bisabuelos», «Tatarabuelos»…
+generations pill «Generaciones − 6 +»: a stepper from 2 to 20 in steps of 2 (default 4), round 28 px
+− / + buttons dimmed and inert at the ends, with tooltips; the value is remembered in the settings
+file. Pedigrí only expands known people (empty «add» slots only next to them) and is capped at
+`MAX_NODES` cards, as is Descendientes; Abanico draws at most 8 rings and, when the stepper asks for
+more, says so in a muted line under the fan («El abanico muestra hasta 8 generaciones»).
+Column headers above each generation: «Hijos» (Pedigrí only, see below), «Persona en foco», «Padres»,
+«Abuelos», «Bisabuelos», «Tatarabuelos»…
 Bottom-left zoom control: − · 100% · + · fit · center. Bottom-right minimap of the laid-out tree
 with the viewport rectangle.
 
 Pedigree flows **left → right**: focus on the left, parents to the right, each column 260 apart,
-each parent pair vertically centred on its child.
+each parent pair vertically centred on its child. One column to the **left** of the focus
+(x = −260) lists the focus's children (all unions, in order) as normal cards stacked with the
+minimum gap and centred on the focus; their connectors run from the child's right edge to the
+focus's left edge. Without children it shows one dashed «+ Añadir hijo» slot.
 
 **Ficha (right, 360):** avatar 80 centred · name (Fraunces 24) · «1790 – 1852 · vivió 62 años» ·
 chips «Mujer» (sex tint) and the id «I500125» · buttons «✎ Editar» (ink filled), «Añadir pariente»
-(outline, opens a menu Padre/Madre/Pareja/Hijo/Hija), «…» (more: Ver GEDCOM, Eliminar).
+(outline, opens a menu Padre/Madre/Pareja/Hijo/Hija), «…» (more: Ver GEDCOM, Unir con otra persona…,
+Eliminar). The three
+share one row: 36 tall, radius 10, Inter 500 13, gap 8, centres aligned; the two menu triggers are
+the app's own outline buttons (`ui::menu_button` / `ui::menu_icon_button`, border token, surface
+background, 14 px chevron), not gpui-component's `Button`.
 Completeness box: «Ficha completa al 40 %» + «Completar» link (opens the dialog), accent progress
 bar, «Faltan lugar de defunción, pareja y fuentes.»
 **Línea de vida**: vertical timeline with dots: «1790 · Nacimiento / Santafé de Bogotá», «1812 ·
@@ -143,3 +158,16 @@ click dismiss. Hovering a row selects it; clicking activates it (⌘-click = edi
 Edit dialog keys (context `EditDialog`, `edit_dialog::bind_keys`): ⌘↵ saves from any field (the note
 included) · esc closes an open place/precision dropdown first, then cancels · ↑↓/↵ drive the place
 autocomplete.
+
+## Merge duplicates
+
+Ficha «…» → «Unir con otra persona…» opens the palette in picker mode: title «Unir a X con…», no
+chips, a «Posibles duplicados» section (`Tree::duplicate_candidates`: similar folded names, same or
+unknown sex, years within 2) above the normal search; people that can't be merged (self, partners,
+parents, children) are hidden. ↵ / click picks. Then a ~640-wide confirmation modal shows both
+people side by side (avatar, name, years, id, parent/partner/child counts); the kept one has the
+accent border. Keys (context `MergeDialog`, `merge_dialog::bind_keys`): ⌘↵ merges · Tab or the ⇄
+button swaps who is kept · esc / backdrop cancels. The merge is one undo step; afterwards the kept
+person is focused and a toast «Personas unidas · Deshacer» offers undo (⌘Z works too).
+Merge rules (pointer rewrite, alternate names, event folding, dropped CHAN/_UPD/RIN) are documented
+in `crates/gedcom/src/merge.rs`.

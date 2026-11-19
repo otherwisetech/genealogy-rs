@@ -1,9 +1,10 @@
-//! Tiny persisted preferences (currently only the UI language), stored as a flat JSON object.
+//! Tiny persisted preferences (UI language, generations shown), stored as a flat JSON object.
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Settings {
     pub language: Option<String>,
+    pub generations: Option<usize>,
 }
 
 fn dir() -> Option<PathBuf> {
@@ -32,14 +33,18 @@ impl Settings {
     }
 
     fn parse(s: &str) -> Settings {
-        Settings { language: json_string(s, "language") }
+        Settings { language: json_string(s, "language"), generations: json_number(s, "generations") }
     }
 
     fn to_json(&self) -> String {
-        match &self.language {
-            Some(l) => format!("{{\n  \"language\": \"{}\"\n}}\n", l.replace(['"', '\\'], "")),
-            None => "{}\n".into(),
+        let mut fields = Vec::new();
+        if let Some(l) = &self.language {
+            fields.push(format!("  \"language\": \"{}\"", l.replace(['"', '\\'], "")));
         }
+        if let Some(g) = self.generations {
+            fields.push(format!("  \"generations\": {g}"));
+        }
+        if fields.is_empty() { "{}\n".into() } else { format!("{{\n{}\n}}\n", fields.join(",\n")) }
     }
 }
 
@@ -48,6 +53,13 @@ fn json_string(s: &str, key: &str) -> Option<String> {
     let at = s.find(&format!("\"{key}\""))? + key.len() + 2;
     let rest = s[at..].trim_start().strip_prefix(':')?.trim_start().strip_prefix('"')?;
     Some(rest[..rest.find('"')?].to_string())
+}
+
+/// Value of a top-level unsigned integer field.
+fn json_number(s: &str, key: &str) -> Option<usize> {
+    let at = s.find(&format!("\"{key}\""))? + key.len() + 2;
+    let rest = s[at..].trim_start().strip_prefix(':')?.trim_start();
+    rest[..rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len())].parse().ok()
 }
 
 /// System UI language tag ("es-CO", "en_US.UTF-8"…), best effort.
@@ -81,8 +93,13 @@ mod tests {
 
     #[test]
     fn roundtrip() {
-        let s = Settings { language: Some("en".into()) };
+        let s = Settings { language: Some("en".into()), generations: None };
         assert_eq!(Settings::parse(&s.to_json()), s);
+        let s = Settings { language: Some("fr".into()), generations: Some(12) };
+        assert_eq!(Settings::parse(&s.to_json()), s);
+        let s = Settings { language: None, generations: Some(6) };
+        assert_eq!(Settings::parse(&s.to_json()), s);
+        assert_eq!(Settings::parse("{ \"generations\": \"x\" }").generations, None);
         assert_eq!(Settings::parse("{}"), Settings::default());
         assert_eq!(Settings::parse("{ \"language\" : \"es\", \"x\": 1 }").language.as_deref(), Some("es"));
     }

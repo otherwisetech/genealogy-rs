@@ -52,7 +52,7 @@ impl GenApp {
             }
             let kind = if hi.contains(&i) {
                 Stroke::Hi
-            } else if matches!(n.slot, Slot::AddParent { .. }) {
+            } else if n.person().is_none() {
                 Stroke::Dashed
             } else {
                 Stroke::Normal
@@ -210,22 +210,27 @@ impl GenApp {
 
     fn render_headers(&self, t: &Tokens, l: &Layout) -> Vec<AnyElement> {
         let desc = self.tab == Tab::Descendants;
-        (0..l.columns)
-            .map(|d| {
-                let s = self.view.to_screen(v2(l.column_x(d), l.header_y));
-                div()
-                    .absolute()
-                    .left(px(s.x))
-                    .top(px(s.y))
-                    .w(px(layout::CARD_W * self.view.zoom))
-                    .text_size(px((12. * self.view.zoom).max(7.)))
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .text_color(t.ink_muted)
-                    .truncate()
-                    .child(column_title(d, desc))
-                    .into_any_element()
-            })
-            .collect()
+        // `None` = the pedigree's children column, left of the focus
+        let cols = l.child_col.then_some(None).into_iter().chain((0..l.columns).map(Some));
+        cols.map(|d| {
+            let x = d.map_or(-layout::STEP, |d| l.column_x(d));
+            let s = self.view.to_screen(v2(x, l.header_y));
+            div()
+                .absolute()
+                .left(px(s.x))
+                .top(px(s.y))
+                .w(px(layout::CARD_W * self.view.zoom))
+                .text_size(px((12. * self.view.zoom).max(7.)))
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(t.ink_muted)
+                .truncate()
+                .child(match d {
+                    Some(d) => column_title(d, desc),
+                    None => i18n::t!("app.column.children"),
+                })
+                .into_any_element()
+        })
+        .collect()
     }
 
     fn render_union_label(&self, t: &Tokens, i: usize, n: &LNode, partner: Option<String>, cx: &mut Context<Self>) -> AnyElement {
@@ -261,9 +266,13 @@ impl GenApp {
         let show_quick = hovered.is_some_and(|(h, at)| h == i && at.elapsed() >= HOVER_DELAY) && n.person().is_some();
         let card = match &n.slot {
             Slot::Person(id) => self.person_card(t, i, id, n.depth == 0, z, cx),
-            Slot::AddParent { child, father } => empty_slot(t, i, *father, z, w, h).on_click({
+            Slot::AddParent { child, father } => empty_slot(t, i, if *father { i18n::t!("app.canvas.add_father") } else { i18n::t!("app.canvas.add_mother") }, z).on_click({
                 let (child, father) = (child.clone(), *father);
                 cx.listener(move |this, _, window, cx| this.add_and_edit(&child, if father { Rel::Father } else { Rel::Mother }, None, window, cx))
+            }),
+            Slot::AddChild { parent } => empty_slot(t, i, i18n::t!("app.canvas.add_child"), z).on_click({
+                let parent = parent.clone();
+                cx.listener(move |this, _, window, cx| this.add_and_edit(&parent, Rel::Child, None, window, cx))
             }),
         };
         let wrapper = div()
@@ -391,30 +400,23 @@ impl GenApp {
         let cur = self.focus_id.as_deref().and_then(|f| self.tree.person(f)).map(|p| p.name()).unwrap_or_default();
         crumbs = crumbs.child(div().font_weight(FontWeight::SEMIBOLD).max_w(px(220.)).truncate().child(cur));
 
-        let mut gens = pill(t).id("gens").pl(px(14.)).occlude().child(div().text_color(t.ink_muted).mr(px(4.)).child(i18n::t!("app.canvas.generations")));
-        for g in 3..=6usize {
-            let sel = self.generations == g;
-            let canvas_bg = t.canvas;
-            gens = gens.child(
-                div()
-                    .id(("gen", g))
-                    .size(px(26.))
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .rounded_full()
-                    .text_size(px(12.))
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .cursor_pointer()
-                    .map(|d| if sel { d.bg(t.ink).text_color(t.on_fill()) } else { d.text_color(t.ink).hover(move |s| s.bg(canvas_bg)) })
-                    .child(g.to_string())
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.generations = g;
-                        this.recenter(true, window);
-                        cx.notify();
-                    })),
-            );
-        }
+        let g = self.generations;
+        let step = |id: &'static str, name: IconName, up: bool, key: &'static str, cx: &mut Context<Self>| {
+            let enabled = if up { g < layout::GEN_MAX } else { g > layout::GEN_MIN };
+            ui::icon_button(t, id, name, enabled)
+                .size(px(28.))
+                .rounded_full()
+                .tooltip(move |w, cx| gpui_component::tooltip::Tooltip::new(i18n::t!(key)).build(w, cx))
+                .on_click(cx.listener(move |this, _, window, cx| this.step_generations(up, window, cx)))
+        };
+        let gens = pill(t)
+            .id("gens")
+            .pl(px(14.))
+            .occlude()
+            .child(div().text_color(t.ink_muted).mr(px(4.)).child(i18n::t!("app.canvas.generations")))
+            .child(step("gens-fewer", IconName::Minus, false, "app.canvas.generations_fewer", cx))
+            .child(div().min_w(px(22.)).text_center().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(g.to_string()))
+            .child(step("gens-more", IconName::Plus, true, "app.canvas.generations_more", cx));
         div().absolute().top(px(16.)).left(px(16.)).right(px(16.)).flex().flex_wrap().gap(px(8.)).child(crumbs).child(gens)
     }
 
@@ -522,7 +524,7 @@ fn contains(r: Rect, w: V2) -> bool {
     w.x >= r.min.x && w.x <= r.max.x && w.y >= r.min.y && w.y <= r.max.y
 }
 
-fn empty_slot(t: &Tokens, i: usize, father: bool, z: f32, _w: f32, _h: f32) -> Stateful<Div> {
+fn empty_slot(t: &Tokens, i: usize, label: String, z: f32) -> Stateful<Div> {
     let (accent, soft) = (t.accent, t.accent_soft);
     div()
         .id(("slot", i))
@@ -540,7 +542,7 @@ fn empty_slot(t: &Tokens, i: usize, father: bool, z: f32, _w: f32, _h: f32) -> S
         .font_weight(FontWeight::MEDIUM)
         .cursor_pointer()
         .hover(move |s| s.border_color(accent).text_color(accent).bg(soft))
-        .child(if father { i18n::t!("app.canvas.add_father") } else { i18n::t!("app.canvas.add_mother") })
+        .child(label)
 }
 
 fn column_title(d: usize, desc: bool) -> String {

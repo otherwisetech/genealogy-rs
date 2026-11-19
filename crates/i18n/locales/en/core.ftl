@@ -135,3 +135,5 @@ core.error.bad_level = line {line}: invalid level "{text}"
 core.error.missing_tag = line {line}: missing tag
 core.error.orphan_line = line {line}: level {level} line outside any record
 core.error.no_record = no record {id}
+core.error.merge_same = a person can't be merged with themselves
+core.error.merge_related = can't merge {a} with {b}: they are partners or parent and child

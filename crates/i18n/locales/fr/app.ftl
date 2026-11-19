@@ -30,6 +30,10 @@ app.canvas.add_father = + Ajouter le père
 app.canvas.add_mother = + Ajouter la mère
 app.canvas.union_with = avec {name}
 app.canvas.union_unknown = avec un conjoint inconnu
+app.canvas.add_child = + Ajouter un enfant
+app.canvas.generations_more = Plus de générations (+)
+app.canvas.generations_fewer = Moins de générations (−)
+app.fan.clamped = L'éventail affiche jusqu'à {n} générations
 
 app.column.focus = Personne au centre
 app.column.parents = Parents
@@ -63,6 +67,7 @@ app.sheet.lived.other = a vécu {n} ans
 app.sheet.edit = ✎ Modifier
 app.sheet.add_relative = Ajouter un proche
 app.sheet.view_gedcom = Voir le GEDCOM
+app.sheet.merge = Fusionner avec une autre personne…
 app.sheet.delete = Supprimer
 app.sheet.delete_confirm_hint = Supprimer cette personne et ses liens ?
 app.sheet.delete_confirm = Supprimer
@@ -95,6 +100,8 @@ app.toast.edit_failed = Impossible d'appliquer la modification : {arg}
 app.toast.undone = Annulé
 app.toast.redone = Rétabli
 app.toast.deleted = Personne supprimée (⌘Z pour annuler)
+app.toast.merged = Personnes fusionnées
+app.toast.undo = Annuler
 
 app.error.not_found = le fichier n'existe pas
 app.error.permission_denied = permission refusée

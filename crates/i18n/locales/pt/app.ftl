@@ -30,6 +30,10 @@ app.canvas.add_father = + Adicionar pai
 app.canvas.add_mother = + Adicionar mãe
 app.canvas.union_with = com {name}
 app.canvas.union_unknown = com cônjuge desconhecido
+app.canvas.add_child = + Adicionar filho
+app.canvas.generations_more = Mais gerações (+)
+app.canvas.generations_fewer = Menos gerações (−)
+app.fan.clamped = O leque mostra até {n} gerações
 
 app.column.focus = Pessoa em foco
 app.column.parents = Pais
@@ -63,6 +67,7 @@ app.sheet.lived.other = viveu {n} anos
 app.sheet.edit = ✎ Editar
 app.sheet.add_relative = Adicionar parente
 app.sheet.view_gedcom = Ver GEDCOM
+app.sheet.merge = Unir com outra pessoa…
 app.sheet.delete = Excluir
 app.sheet.delete_confirm_hint = Excluir esta pessoa e seus vínculos?
 app.sheet.delete_confirm = Excluir
@@ -95,6 +100,8 @@ app.toast.edit_failed = Não foi possível aplicar a alteração: {arg}
 app.toast.undone = Desfeito
 app.toast.redone = Refeito
 app.toast.deleted = Pessoa excluída (⌘Z para desfazer)
+app.toast.merged = Pessoas unidas
+app.toast.undo = Desfazer
 
 app.error.not_found = o arquivo não existe
 app.error.permission_denied = permissão negada

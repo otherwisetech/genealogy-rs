@@ -2,11 +2,14 @@
 //! 0 = focus, father before mother), drawn left → right over the top.
 use crate::app::GenApp;
 use crate::theme::tokens;
+use gpui::prelude::FluentBuilder as _;
 use gpui::*;
 use std::f32::consts::PI;
 
 const R0: f32 = 72.;
 const RING: f32 = 92.;
+/// rings beyond this are slivers (and 2^n wedges), so the fan stops here whatever the stepper says
+pub const FAN_MAX: usize = 8;
 
 /// (inner radius, outer radius, start angle, end angle) of Ahnentafel slot `ix` (ix ≥ 1).
 pub fn wedge(ix: usize) -> (f32, f32, f32, f32) {
@@ -44,7 +47,8 @@ impl GenApp {
     pub(crate) fn render_fan(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let t = tokens(cx);
         let Some(focus) = self.focus_id.clone() else { return div().size_full().into_any_element() };
-        let gens = self.generations;
+        let gens = self.generations.min(FAN_MAX);
+        let clamped = self.generations > FAN_MAX;
         let slots = self.tree.pedigree(&focus, gens as u32);
         let b = self.canvas_bounds.get();
         let (w, h): (f32, f32) = (b.size.width.into(), b.size.height.into());
@@ -167,6 +171,9 @@ impl GenApp {
             .child(canvas_el)
             .children(labels)
             .child(self.render_top_pills(&t, cx))
+            .when(clamped, |d| {
+                d.child(div().absolute().left_0().right_0().bottom(px(12.)).flex().justify_center().child(div().text_size(px(12.)).text_color(t.ink_muted).child(i18n::t!("app.fan.clamped", n = FAN_MAX))))
+            })
             .into_any_element()
     }
 }
