@@ -167,8 +167,16 @@ pub fn palette_search(tree: &Tree, query: &str, filter: SearchFilter, focus: Opt
 
     if filter != SearchFilter::Places {
         let focus_name = focus.and_then(|f| tree.person(f)).map(|p| p.given.split_whitespace().next().map(str::to_string).unwrap_or_else(|| p.name()));
-        let mut ranked: Vec<(u8, usize, &str)> = search(tree, query)
-            .into_iter()
+        // name/years/places first; notes only when the query isn't matched there (tier 4)
+        let in_notes = |p: &crate::tree::Person| !toks.is_empty() && !p.note_key.is_empty() && words_match(&format!("{} {}", p.search_key, p.note_key), &toks);
+        let mut ranked: Vec<(u8, usize, &str)> = tree
+            .order
+            .iter()
+            .map(String::as_str)
+            .filter(|id| {
+                let p = &tree.people[*id];
+                words_match(&p.search_key, &toks) || in_notes(p)
+            })
             .enumerate()
             .filter(|(_, id)| {
                 let p = &tree.people[*id];
@@ -180,7 +188,9 @@ pub fn palette_search(tree: &Tree, query: &str, filter: SearchFilter, focus: Opt
             })
             .map(|(i, id)| {
                 let name = tokens(&fold(&tree.people[id].name())).join(" ");
-                let tier = if joined.is_empty() || name == joined {
+                let tier = if !words_match(&tree.people[id].search_key, &toks) {
+                    4
+                } else if joined.is_empty() || name == joined {
                     0
                 } else if name.starts_with(&joined) {
                     1
@@ -193,7 +203,20 @@ pub fn palette_search(tree: &Tree, query: &str, filter: SearchFilter, focus: Opt
             })
             .collect();
         ranked.sort();
-        res.people = ranked.into_iter().take(limit).map(|(_, _, id)| person_hit(tree, id, &toks, &years, focus, focus_name.as_deref())).collect();
+        res.people = ranked
+            .into_iter()
+            .take(limit)
+            .map(|(tier, _, id)| {
+                let mut hit = person_hit(tree, id, &toks, &years, focus, focus_name.as_deref());
+                if tier == 4 {
+                    if let Some(snip) = note_snippet(&tree.people[id], &toks) {
+                        hit.sub_hl = Folded::new(&snip).highlights(&toks);
+                        hit.sub = snip;
+                    }
+                }
+                hit
+            })
+            .collect();
     }
 
     let places_allowed = match filter {
@@ -211,6 +234,38 @@ pub fn palette_search(tree: &Tree, query: &str, filter: SearchFilter, focus: Opt
             .collect();
     }
     res
+}
+
+/// «…tuvo el primer teléfono de Sardinata…»: ~90 chars of the first note around the first word
+/// that matches a query token not found in the person's name/years/places.
+fn note_snippet(p: &crate::tree::Person, toks: &[&str]) -> Option<String> {
+    let key_words: Vec<&str> = p.search_key.split(|c: char| !c.is_alphanumeric()).collect();
+    let wanted: Vec<&str> = toks.iter().copied().filter(|t| !key_words.iter().any(|w| w.starts_with(t))).collect();
+    let wanted = if wanted.is_empty() { toks.to_vec() } else { wanted };
+    for note in &p.notes {
+        let flat = note.split_whitespace().collect::<Vec<_>>().join(" ");
+        let f = Folded::new(&flat);
+        let Some(hit) = f.highlights(&wanted).into_iter().next() else { continue };
+        let floor = |mut i: usize| {
+            while !flat.is_char_boundary(i) {
+                i -= 1;
+            }
+            i
+        };
+        let start = floor(hit.start.saturating_sub(35));
+        let start = if start == 0 { 0 } else { flat[start..].find(' ').map(|n| start + n + 1).filter(|&s| s <= hit.start).unwrap_or(start) };
+        let end = floor((hit.start + 90).min(flat.len()));
+        let mut out = String::new();
+        if start > 0 {
+            out.push('…');
+        }
+        out.push_str(flat[start..end].trim());
+        if end < flat.len() {
+            out.push('…');
+        }
+        return Some(out);
+    }
+    None
 }
 
 fn person_hit(tree: &Tree, id: &str, toks: &[&str], years: &[&str], focus: Option<&str>, focus_name: Option<&str>) -> PersonHit {
@@ -323,6 +378,22 @@ mod palette_tests {
         assert_eq!(r.people[0].sub, "1790 – 1852 · father of Rosa");
         assert_eq!(hl(&r.people[0].sub, &r.people[0].sub_hl), vec!["1852"]);
         i18n::set_locale("es");
+    }
+
+    #[test]
+    fn notes_are_searched_last() {
+        let src = "0 HEAD\n0 @I1@ INDI\n1 NAME Alejo /Ruiz/\n1 NOTE <p>Tuvo el primer tel&eacute;fono de Sardinata y lo us&oacute; a diario para hablar con su primo.</p>\n0 @I2@ INDI\n1 NAME Telésforo /Mora/\n0 TRLR\n";
+        let t = Tree::parse(src).unwrap();
+        let r = palette_search(&t, "telefono", SearchFilter::All, None, 10);
+        assert_eq!(r.people.len(), 1);
+        assert_eq!(r.people[0].sub, "Tuvo el primer teléfono de Sardinata y lo usó a diario para hablar con su primo.");
+        assert_eq!(hl(&r.people[0].sub, &r.people[0].sub_hl), vec!["teléfono"]);
+        // a name match ranks above a note match
+        let r = palette_search(&t, "tel", SearchFilter::All, None, 10);
+        assert_eq!(r.people.iter().map(|h| h.id.as_str()).collect::<Vec<_>>(), vec!["I2", "I1"]);
+        // tokens may be split between the name and the notes
+        assert_eq!(palette_search(&t, "alejo sardinata", SearchFilter::All, None, 10).people.len(), 1);
+        assert!(palette_search(&t, "", SearchFilter::All, None, 10).people.iter().all(|h| !h.sub.contains("teléfono")));
     }
 
     #[test]

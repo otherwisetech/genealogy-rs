@@ -9,6 +9,9 @@ use gpui_component::menu::{DropdownMenu as _, PopupMenuItem};
 use gpui_component::IconName;
 
 const SIBLING_AVATARS: usize = 5;
+/// notes shown before «Ver todas», and their length when collapsed
+const NOTES_COLLAPSED: usize = 3;
+const NOTE_CHARS: usize = 320;
 
 impl GenApp {
     pub(crate) fn render_sheet(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -35,6 +38,7 @@ impl GenApp {
                 .child(self.sheet_header(&t, &p, cx))
                 .child(self.sheet_completeness(&t, &p, cx))
                 .child(self.sheet_timeline(&t, &p, cx))
+                .child(self.sheet_notes(&t, &p, cx))
                 .child(self.sheet_parents(&t, &p, cx))
                 .child(self.sheet_siblings(&t, &p, cx))
                 .child(self.sheet_children(&t, &p, cx)),
@@ -279,6 +283,36 @@ impl GenApp {
                 row = row.child(div().ml(px(-8.)).size(px(36.)).rounded_full().border_2().border_color(t.surface).bg(t.canvas).flex().items_center().justify_center().text_size(px(12.)).font_weight(FontWeight::SEMIBOLD).text_color(t.ink_muted).child(format!("+{}", sibs.len() - SIBLING_AVATARS)));
             }
             d = d.child(row);
+        }
+        d.into_any_element()
+    }
+
+    fn sheet_notes(&self, t: &Tokens, p: &Person, cx: &mut Context<Self>) -> AnyElement {
+        if p.notes.is_empty() {
+            return div().into_any_element();
+        }
+        let expanded = self.notes_expanded;
+        let long = p.notes.len() > NOTES_COLLAPSED || p.notes.iter().any(|n| n.chars().count() > NOTE_CHARS);
+        let mut head = div().flex().justify_between().items_center().child(section_title(t, i18n::t!("app.sheet.notes", n = p.notes.len())));
+        if long {
+            head = head.child(link(t, "notes-all", if expanded { i18n::t!("app.sheet.see_less") } else { i18n::t!("app.sheet.see_all") }).on_click(cx.listener(|this, _, _, cx| {
+                this.notes_expanded = !this.notes_expanded;
+                cx.notify();
+            })));
+        }
+        let mut d = div().flex().flex_col().gap(px(10.)).child(head);
+        let shown = if expanded { p.notes.len() } else { NOTES_COLLAPSED };
+        for note in p.notes.iter().take(shown) {
+            let text = if expanded || note.chars().count() <= NOTE_CHARS {
+                note.clone()
+            } else {
+                let cut: String = note.chars().take(NOTE_CHARS).collect();
+                format!("{}…", cut.trim_end())
+            };
+            d = d.child(div().pl(px(12.)).border_l_2().border_color(t.border).text_size(px(13.)).line_height(px(19.)).text_color(t.ink).child(text));
+        }
+        if !expanded && p.notes.len() > shown {
+            d = d.child(div().text_size(px(12.)).text_color(t.ink_muted).child(i18n::t!("app.sheet.notes_more", n = p.notes.len() - shown)));
         }
         d.into_any_element()
     }

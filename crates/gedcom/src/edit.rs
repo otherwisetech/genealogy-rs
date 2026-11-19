@@ -1,5 +1,6 @@
 //! Whole-person edit used by the edit dialog.
 use crate::node::Node;
+use crate::sources::CitationEdit;
 use crate::tree::{EditError, Event, Sex, Tree};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -21,6 +22,8 @@ pub struct PersonEdit {
     pub death: EventEdit,
     /// first inline NOTE
     pub note: String,
+    /// on the person and on their events (see [`Tree::citations`])
+    pub citations: Vec<CitationEdit>,
 }
 
 fn event_edit(e: Option<&Event>, default_tag: &str) -> EventEdit {
@@ -38,7 +41,7 @@ impl Tree {
     /// Current values of a person as an editable form.
     pub fn person_edit(&self, id: &str) -> Option<PersonEdit> {
         let p = self.person(id)?;
-        let note = self.record(id).and_then(first_inline_note).map(|n| n.value.clone()).unwrap_or_default();
+        let note = self.record(id).and_then(first_inline_note).map(|n| crate::notes::note_text(&n.value)).unwrap_or_default();
         Some(PersonEdit {
             id: id.into(),
             given: p.given.clone(),
@@ -47,6 +50,7 @@ impl Tree {
             birth: event_edit(p.birth.as_ref(), "BIRT"),
             death: event_edit(p.death.as_ref(), "DEAT"),
             note,
+            citations: self.citations(id),
         })
     }
 
@@ -54,7 +58,8 @@ impl Tree {
     pub fn apply_person_edit(&mut self, edit: &PersonEdit) -> Result<bool, EditError> {
         let id = edit.id.as_str();
         let cur = self.person_edit(id).ok_or_else(|| EditError::NotFound(id.into()))?;
-        let mut changed = false;
+        // citations first: they address events by position, which the event edits below may shift
+        let mut changed = self.apply_citations(id, &cur.citations, &edit.citations)?;
         if edit.given.trim() != cur.given.trim() || edit.surname.trim() != cur.surname.trim() {
             self.set_name(id, &edit.given, &edit.surname)?;
             changed = true;

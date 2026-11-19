@@ -8,13 +8,16 @@ pub mod insights;
 pub mod kinship;
 pub mod merge;
 pub mod node;
+pub mod notes;
 pub mod place_links;
 pub mod places;
 pub mod quality;
 pub mod search;
+pub mod sources;
 pub mod tree;
 
 pub use node::{Node, ParseError};
+pub use notes::note_text;
 pub use date::{DateValue, Precision, normalize_date};
 pub use edit::{EventEdit, PersonEdit};
 pub use insights::{Completeness, Missing, TimelineItem};
@@ -22,6 +25,7 @@ pub use kinship::{KinAlt, KinKind, Kinship, Link};
 pub use place_links::{Branch, Couple, Migration, MoveDir, ParentChild, PlaceLinks};
 pub use places::{PlaceEvent, PlaceGroup, parse_coord, place_key};
 pub use quality::{Issue, IssueKind, Severity};
+pub use sources::{CitationEdit, FactOption, FactRef};
 pub use search::{MergeResults, PaletteResults, PersonHit, PlaceHit, SearchFilter, fold, merge_search, palette_search, search};
 pub use tree::{EditError, Event, Family, Person, Sex, Tree, year_of};
 

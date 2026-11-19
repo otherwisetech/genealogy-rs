@@ -89,6 +89,8 @@ pub struct Person {
     pub notes: Vec<String>,
     /// accent/case-folded "given surname years" for search
     pub search_key: String,
+    /// accent/case-folded text of the notes, searched after `search_key`
+    pub note_key: String,
 }
 
 impl Person {
@@ -322,7 +324,7 @@ impl Tree {
 
     // ---- edits ----
 
-    fn next_id(&self, prefix: &str) -> String {
+    pub(crate) fn next_id(&self, prefix: &str) -> String {
         let max = self
             .rec_ix
             .keys()
@@ -333,7 +335,7 @@ impl Tree {
         format!("{prefix}{}", max + 1)
     }
 
-    fn insert_record(&mut self, rec: Node) {
+    pub(crate) fn insert_record(&mut self, rec: Node) {
         // keep TRLR last
         let at = self.records.iter().rposition(|r| r.tag == "TRLR").unwrap_or(self.records.len());
         self.records.insert(at, rec);
@@ -587,8 +589,8 @@ fn build_person(id: &str, r: &Node, notes: &HashMap<String, String>) -> Person {
     let note_list: Vec<String> = r
         .children_with("NOTE")
         .filter_map(|n| match n.pointer() {
-            Some(p) => notes.get(p).cloned(),
-            None => Some(n.value.clone()),
+            Some(p) => notes.get(p).map(|s| crate::notes::note_text(s)),
+            None => Some(crate::notes::note_text(&n.value)),
         })
         .filter(|s| !s.trim().is_empty())
         .collect();
@@ -604,12 +606,14 @@ fn build_person(id: &str, r: &Node, notes: &HashMap<String, String>) -> Person {
         fams: ptrs("FAMS"),
         notes: note_list,
         search_key: String::new(),
+        note_key: String::new(),
     };
     let married: Vec<&str> = r.children_with("NAME").filter_map(|n| n.child_value("_MARNM")).collect();
     let places: Vec<&str> = p.events.iter().filter_map(|e| e.place.as_deref()).collect();
     // years rather than the localized lifespan so the key doesn't depend on the UI language
     let years = [p.birth_year(), p.death_year()].iter().flatten().map(i32::to_string).collect::<Vec<_>>().join(" ");
     p.search_key = fold(&format!("{} {} {} {} {} {}", p.given, p.surname, married.join(" "), years, places.join(" "), id));
+    p.note_key = fold(&p.notes.join(" "));
     p
 }
 

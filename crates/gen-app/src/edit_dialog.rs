@@ -2,7 +2,7 @@
 //! The host app renders it as an overlay and reacts to its events; it never mutates the tree.
 use crate::theme::{self, Tokens, size};
 use std::rc::Rc;
-use gedcom::{DateValue, EventEdit, PersonEdit, Precision, Sex, Tree, normalize_date};
+use gedcom::{CitationEdit, DateValue, EventEdit, FactOption, FactRef, PersonEdit, Precision, Sex, Tree, fold, normalize_date};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
 use gpui_component::input::{Input, InputEvent, InputState, Textarea, TextareaState};
@@ -82,6 +82,16 @@ pub struct EditDialog {
     death: DateInputs,
     note: Entity<TextareaState>,
     events: Vec<EventRow>,
+    /// working copy of the person's citations; written on save
+    citations: Vec<CitationEdit>,
+    facts: Vec<FactOption>,
+    /// (id, title) of every SOUR record, for the source picker
+    sources: Vec<(String, String)>,
+    cite_source: Entity<InputState>,
+    cite_page: Entity<InputState>,
+    /// event the new citation backs; None = the person as a whole
+    cite_fact: Option<FactRef>,
+    source_suggest: bool,
     precision_menu: Option<Slot>,
     suggest: Option<Suggest>,
     confirm_delete: bool,
@@ -112,6 +122,8 @@ impl EditDialog {
         let death = dates(&edit.death, window, cx);
         let note_text = edit.note.clone();
         let note = cx.new(|cx| TextareaState::new(window, cx).default_value(note_text));
+        let cite_source = text("", window, cx);
+        let cite_page = text("", window, cx);
 
         let mut subs = Vec::new();
         for st in [&given, &surname, &birth.date, &birth.date2, &death.date, &death.date2] {
@@ -131,6 +143,21 @@ impl EditDialog {
                 _ => {}
             }));
         }
+        subs.push(cx.subscribe_in(&cite_source, window, |this, _, ev: &InputEvent, window, cx| match ev {
+            InputEvent::Focus | InputEvent::Change => {
+                this.suggest = None;
+                this.precision_menu = None;
+                this.source_suggest = true;
+                cx.notify();
+            }
+            InputEvent::PressEnter { secondary: false, .. } => this.add_citation(window, cx),
+            _ => {}
+        }));
+        subs.push(cx.subscribe_in(&cite_page, window, |this, _, ev: &InputEvent, window, cx| match ev {
+            InputEvent::Focus => this.close_popups(cx),
+            InputEvent::PressEnter { secondary: false, .. } => this.add_citation(window, cx),
+            _ => {}
+        }));
         // the note is multi-line, so ⌘↵ does not bubble up as an action there
         subs.push(cx.subscribe_in(&note, window, |this, _, ev: &InputEvent, _, cx| match ev {
             InputEvent::PressEnter { secondary: true, .. } => this.save(cx),
@@ -141,6 +168,13 @@ impl EditDialog {
         EditDialog {
             sex: edit.sex,
             events: event_rows(&tree, person_id),
+            citations: edit.citations.clone(),
+            facts: tree.citable_facts(person_id),
+            sources: tree.sources(),
+            cite_source,
+            cite_page,
+            cite_fact: None,
+            source_suggest: false,
             tree,
             edit,
             focus: cx.focus_handle(),
@@ -178,7 +212,7 @@ impl EditDialog {
     }
 
     fn close_popups(&mut self, cx: &mut Context<Self>) {
-        if self.suggest.take().is_some() | self.precision_menu.take().is_some() {
+        if self.suggest.take().is_some() | self.precision_menu.take().is_some() | std::mem::take(&mut self.source_suggest) {
             cx.notify();
         }
     }
@@ -205,7 +239,40 @@ impl EditDialog {
     fn fields(&self, cx: &App) -> PersonEdit {
         let v = |st: &Entity<InputState>| st.read(cx).value().to_string();
         let ev = |d: &DateInputs| DateFields { precision: d.precision, date: v(&d.date), date2: v(&d.date2), place: v(&d.place) };
-        build_edit(&self.edit, &v(&self.given), &v(&self.surname), self.sex, &ev(&self.birth), &ev(&self.death), &self.note.read(cx).value())
+        let mut edit = build_edit(&self.edit, &v(&self.given), &v(&self.surname), self.sex, &ev(&self.birth), &ev(&self.death), &self.note.read(cx).value());
+        // a citation typed but not yet added still counts on save
+        edit.citations = self.citations.iter().cloned().chain(self.pending_citation(cx)).collect();
+        edit
+    }
+
+    /// The citation in the «add» form, if a source title was typed.
+    fn pending_citation(&self, cx: &App) -> Option<CitationEdit> {
+        let title = self.cite_source.read(cx).value().trim().to_string();
+        if title.is_empty() {
+            return None;
+        }
+        let key = fold(&title);
+        let source = self.sources.iter().find(|(_, t)| fold(t) == key).map(|(id, _)| id.clone()).unwrap_or_default();
+        let page = self.cite_page.read(cx).value().trim().to_string();
+        Some(CitationEdit { fact: self.cite_fact.clone(), source, title, page, slot: None })
+    }
+
+    fn add_citation(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(c) = self.pending_citation(cx) {
+            self.citations.push(c);
+            for st in [self.cite_source.clone(), self.cite_page.clone()] {
+                st.update(cx, |s, cx| s.set_value("", window, cx));
+            }
+        }
+        self.source_suggest = false;
+        cx.notify();
+    }
+
+    fn fact_label(&self, fact: &Option<FactRef>) -> String {
+        match fact {
+            None => i18n::t!("dialogs.edit.sources.general"),
+            Some(f) => self.facts.iter().find(|o| &o.fact == f).map(|o| o.label.clone()).unwrap_or_else(|| gedcom::tree::event_label(&f.tag)),
+        }
     }
 
     fn save(&mut self, cx: &mut Context<Self>) {
@@ -247,6 +314,7 @@ impl EditDialog {
         }
         self.synced_locale = locale;
         self.events = event_rows(&self.tree, &self.edit.id);
+        self.facts = self.tree.citable_facts(&self.edit.id);
         let set = |st: &Entity<InputState>, key: &str, window: &mut Window, cx: &mut Context<Self>| {
             let text = i18n::tr(key, &[]);
             st.update(cx, |s, cx| s.set_placeholder(text, window, cx));
@@ -262,6 +330,8 @@ impl EditDialog {
             set(&d2, "dialogs.edit.date2_ph", window, cx);
             set(&p, "dialogs.edit.place_ph", window, cx);
         }
+        set(&self.cite_source.clone(), "dialogs.edit.sources.source_ph", window, cx);
+        set(&self.cite_page.clone(), "dialogs.edit.sources.page_ph", window, cx);
         let text = i18n::t!("dialogs.edit.note_ph");
         self.note.update(cx, |s, cx| s.set_placeholder(text, window, cx));
     }
@@ -605,12 +675,149 @@ impl EditDialog {
             .into_any_element()
     }
 
-    fn render_notes(&self, t: &Tokens) -> AnyElement {
+    fn render_notes(&self, t: &Tokens, cx: &mut Context<Self>) -> AnyElement {
         v_flex()
             .gap_4()
             .child(field(t, i18n::t!("dialogs.edit.note"), Textarea::new(&self.note).h(px(180.))))
-            .child(card(t, i18n::t!("dialogs.edit.sources")).child(div().text_size(px(12.)).text_color(t.ink_muted).child(i18n::t!("dialogs.edit.sources_soon"))))
+            .child(self.render_sources(t, cx))
             .into_any_element()
+    }
+
+    fn render_sources(&self, t: &Tokens, cx: &mut Context<Self>) -> impl IntoElement {
+        let mut list = v_flex();
+        if self.citations.is_empty() {
+            list = list.child(div().text_size(px(12.)).italic().text_color(t.ink_muted).child(i18n::t!("dialogs.edit.sources.empty")));
+        }
+        for (i, c) in self.citations.iter().enumerate() {
+            let detail: Vec<String> = [c.page.clone(), self.fact_label(&c.fact)].into_iter().filter(|s| !s.trim().is_empty()).collect();
+            list = list.child(
+                h_flex()
+                    .gap_2p5()
+                    .items_start()
+                    .py_2()
+                    .border_b_1()
+                    .border_color(t.border)
+                    .child(div().pt(px(2.)).child(Icon::new(IconName::Inbox).xsmall().text_color(t.ink_muted)))
+                    .child(
+                        v_flex()
+                            .flex_1()
+                            .min_w_0()
+                            .gap_0p5()
+                            .child(div().text_size(px(13.)).font_weight(FontWeight::MEDIUM).text_color(t.ink).child(c.title.clone()))
+                            .child(div().text_size(px(12.)).text_color(t.ink_muted).child(detail.join(" · "))),
+                    )
+                    .child(
+                        div()
+                            .id(("cite-remove", i))
+                            .size(px(22.))
+                            .flex_none()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .rounded(px(6.))
+                            .cursor_pointer()
+                            .text_color(t.ink_muted)
+                            .hover(|s| s.bg(t.canvas).text_color(t.danger))
+                            .child(Icon::new(IconName::Close).xsmall())
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                this.citations.remove(i);
+                                cx.notify();
+                            })),
+                    ),
+            );
+        }
+
+        let mut facts = h_flex().flex_wrap().gap_1p5();
+        let options: Vec<(Option<FactRef>, String)> = std::iter::once((None, i18n::t!("dialogs.edit.sources.general")))
+            .chain(self.facts.iter().map(|o| (Some(o.fact.clone()), match o.year {
+                Some(y) => format!("{} · {y}", o.label),
+                None => o.label.clone(),
+            })))
+            .collect();
+        for (i, (fact, label)) in options.into_iter().enumerate() {
+            let active = self.cite_fact == fact;
+            facts = facts.child(
+                div()
+                    .id(("cite-fact", i))
+                    .px_2()
+                    .py_0p5()
+                    .rounded(px(999.))
+                    .border_1()
+                    .text_size(px(12.))
+                    .cursor_pointer()
+                    .when(active, |d| d.border_color(t.accent).bg(t.accent_soft).text_color(t.accent).font_weight(FontWeight::MEDIUM))
+                    .when(!active, |d| d.border_color(t.border).text_color(t.ink_muted).hover(|s| s.text_color(t.ink).border_color(t.border_strong)))
+                    .child(label)
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.cite_fact = fact.clone();
+                        cx.notify();
+                    })),
+            );
+        }
+
+        let query = self.cite_source.read(cx).value().trim().to_string();
+        let exact = !query.is_empty() && self.sources.iter().any(|(_, t)| fold(t) == fold(&query));
+        let matches: Vec<String> = if self.source_suggest && !query.is_empty() {
+            let q = fold(&query);
+            self.sources.iter().filter(|(_, t)| fold(t).contains(&q) && fold(t) != q).take(6).map(|(_, t)| t.clone()).collect()
+        } else {
+            vec![]
+        };
+        let source_input = div().relative().w_full().child(Input::new(&self.cite_source).small()).when(!matches.is_empty(), |d| {
+            let mut menu = v_flex()
+                .id("cite-suggest")
+                .absolute()
+                .top(size::FIELD_H + px(4.))
+                .left_0()
+                .w_full()
+                .p_1()
+                .rounded(px(10.))
+                .border_1()
+                .border_color(t.border)
+                .bg(t.surface)
+                .shadow_lg()
+                .occlude()
+                .on_mouse_down_out(cx.listener(|this, _, _, cx| {
+                    this.source_suggest = false;
+                    cx.notify();
+                }));
+            for (i, title) in matches.into_iter().enumerate() {
+                menu = menu.child(
+                    h_flex()
+                        .id(("cite-suggest-row", i))
+                        .gap_2()
+                        .px_2()
+                        .py_1p5()
+                        .rounded(px(6.))
+                        .cursor_pointer()
+                        .hover(|s| s.bg(t.canvas))
+                        .child(Icon::new(IconName::Inbox).xsmall().text_color(t.ink_muted))
+                        .child(div().flex_1().min_w_0().truncate().text_size(px(13.)).text_color(t.ink).child(title.clone()))
+                        .on_mouse_down(MouseButton::Left, cx.listener(move |this, _, window, cx| {
+                            cx.stop_propagation();
+                            let title = title.clone();
+                            this.cite_source.update(cx, |s, cx| s.set_value(title, window, cx));
+                            this.source_suggest = false;
+                            cx.notify();
+                        })),
+                );
+            }
+            d.child(deferred(menu).with_priority(1))
+        });
+
+        card(t, i18n::t!("dialogs.edit.sources"))
+            .child(list)
+            .child(div().pt_1().text_size(px(12.)).font_weight(FontWeight::SEMIBOLD).text_color(t.ink_muted).child(i18n::t!("dialogs.edit.sources.add")))
+            .child(
+                h_flex()
+                    .gap_3()
+                    .items_start()
+                    .child(field(t, i18n::t!("dialogs.edit.sources.source"), source_input))
+                    .child(div().w(px(170.)).flex_none().child(field(t, i18n::t!("dialogs.edit.sources.page"), Input::new(&self.cite_page).small()))),
+            )
+            .when(!query.is_empty() && !exact, |d| d.child(div().text_size(px(12.)).text_color(t.ink_muted).child(i18n::t!("dialogs.edit.sources.new", title = query.clone()))))
+            .child(field(t, i18n::t!("dialogs.edit.sources.fact"), facts))
+            .child(h_flex().justify_end().child(button("cite-add", i18n::t!("dialogs.edit.sources.add_button"), false, t).on_click(cx.listener(|this, _, window, cx| this.add_citation(window, cx)))))
     }
 
     fn render_footer(&self, t: &Tokens, cx: &mut Context<Self>) -> impl IntoElement {
@@ -676,7 +883,7 @@ impl Render for EditDialog {
             Tab::Data => self.render_data(&t, cx),
             Tab::Events => self.render_events(&t),
             Tab::Family => self.render_family(&t),
-            Tab::Notes => self.render_notes(&t),
+            Tab::Notes => self.render_notes(&t, cx),
             Tab::Photos => empty_state(&t, IconName::Frame, i18n::t!("dialogs.edit.photos_soon")).into_any_element(),
         };
         let max_h = window.viewport_size().height * 0.9;
@@ -866,6 +1073,7 @@ fn build_edit(base: &PersonEdit, given: &str, surname: &str, sex: Sex, birth: &D
         birth: event(&base.birth, birth, "BIRT"),
         death: event(&base.death, death, "DEAT"),
         note: note.trim_end().to_string(),
+        citations: base.citations.clone(),
     }
 }
 

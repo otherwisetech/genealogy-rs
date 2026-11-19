@@ -83,6 +83,8 @@ app.sheet.parents = Parents
 app.sheet.siblings = Siblings ({n})
 app.sheet.see_all = See all
 app.sheet.see_less = See less
+app.sheet.notes = Notes ({n})
+app.sheet.notes_more = and {n} more…
 app.sheet.children = Children ({n})
 app.sheet.add_child = + Add son or daughter
 

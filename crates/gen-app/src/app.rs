@@ -136,6 +136,7 @@ pub struct GenApp {
     raw_focus: FocusHandle,
     pub(crate) armed_delete: Option<String>,
     pub(crate) siblings_expanded: bool,
+    pub(crate) notes_expanded: bool,
     guard: Option<&'static str>,
     toast: Option<Toast>,
     pub(crate) list_scroll: UniformListScrollHandle,
@@ -188,6 +189,7 @@ impl GenApp {
             raw_focus: cx.focus_handle(),
             armed_delete: None,
             siblings_expanded: false,
+            notes_expanded: false,
             guard: None,
             toast: None,
             list_scroll: UniformListScrollHandle::new(),
@@ -535,6 +537,7 @@ impl GenApp {
         self.focus_id = Some(id.clone());
         self.armed_delete = None;
         self.siblings_expanded = false;
+        self.notes_expanded = false;
         self.hovered = None;
         if let Some(ix) = self.tree.order.iter().position(|o| *o == id) {
             self.list_scroll.scroll_to_item(ix, ScrollStrategy::Center);
