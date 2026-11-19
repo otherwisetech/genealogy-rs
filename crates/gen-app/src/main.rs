@@ -43,6 +43,27 @@ impl AssetSource for AppAssets {
 
 pub(crate) const LOGO_SVG: &str = "icons/gen-logo.svg";
 
+/// Sets the Dock icon at runtime: covers `cargo run` (no bundle) and stale Dock icon caches.
+#[cfg(target_os = "macos")]
+#[allow(unexpected_cfgs)] // objc 0.2 macros check a `cargo-clippy` feature
+fn set_dock_icon() {
+    use objc::runtime::Object;
+    use objc::{class, msg_send, sel, sel_impl};
+    static PNG: &[u8] = include_bytes!("../assets/logo/gen-icon-1024.png");
+    // SAFETY: plain AppKit calls on the main thread with a valid byte buffer that NSData copies.
+    unsafe {
+        let data: *mut Object = msg_send![class!(NSData), dataWithBytes: PNG.as_ptr() length: PNG.len()];
+        let image: *mut Object = msg_send![class!(NSImage), alloc];
+        let image: *mut Object = msg_send![image, initWithData: data];
+        if image.is_null() {
+            return;
+        }
+        let app: *mut Object = msg_send![class!(NSApplication), sharedApplication];
+        let _: () = msg_send![app, setApplicationIconImage: image];
+        let _: () = msg_send![image, release];
+    }
+}
+
 const FONTS: [&[u8]; 4] = [
     include_bytes!("../assets/fonts/Inter-Regular.ttf"),
     include_bytes!("../assets/fonts/Inter-Medium.ttf"),
@@ -62,6 +83,8 @@ fn main() {
         if let Err(e) = cx.text_system().add_fonts(FONTS.iter().map(|f| Cow::Borrowed(*f)).collect()) {
             eprintln!("fonts: {e}");
         }
+        #[cfg(target_os = "macos")]
+        set_dock_icon();
         gpui_component::init(cx);
         app::sync_theme(None, cx);
         app::bind_keys(cx);
