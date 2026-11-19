@@ -1,4 +1,4 @@
-//! 56 px top bar: logo, tree title, view tabs, search look-alike, undo/redo, export, «+ Persona»,
+//! 56 px top bar: logo, tree title, view tabs, search look-alike, undo/redo, import/export menu, «+ Persona»,
 //! open file and the language switcher.
 use crate::app::{GenApp, Tab};
 use crate::theme::{SERIF, Tokens, size, tokens};
@@ -57,6 +57,23 @@ impl GenApp {
             menu
         });
 
+        let file_menu = ui::menu_button(&t, "file-menu", i18n::t!("app.topbar.file_menu")).dropdown_menu_with_anchor(Anchor::TopRight, {
+            let weak = cx.entity().downgrade();
+            move |menu, _, _| {
+                let (w1, w2, w3) = (weak.clone(), weak.clone(), weak.clone());
+                menu.item(PopupMenuItem::new(i18n::t!("app.topbar.save_as")).on_click(move |_, window, cx| {
+                    w1.update(cx, |this, cx| this.save(true, window, cx)).ok();
+                }))
+                .item(PopupMenuItem::new(i18n::t!("app.topbar.export7")).on_click(move |_, window, cx| {
+                    w2.update(cx, |this, cx| this.export_gedcom7(window, cx)).ok();
+                }))
+                .separator()
+                .item(PopupMenuItem::new(i18n::t!("app.topbar.import")).on_click(move |_, window, cx| {
+                    w3.update(cx, |this, cx| this.import_dialog(window, cx)).ok();
+                }))
+            }
+        });
+
         div()
             .flex()
             .flex_none()
@@ -80,7 +97,7 @@ impl GenApp {
                     .child(ui::icon_button(&t, "redo", IconName::Redo, can_redo).tooltip(|w, cx| gpui_component::tooltip::Tooltip::new(i18n::t!("app.topbar.redo")).build(w, cx)).on_click(cx.listener(|this, _, window, cx| this.undo(true, window, cx)))),
             )
             .child(ui::icon_button(&t, "open", IconName::FolderOpen, true).tooltip(|w, cx| gpui_component::tooltip::Tooltip::new(i18n::t!("app.topbar.open")).build(w, cx)).on_click(cx.listener(|this, _, window, cx| this.open_dialog(window, cx))))
-            .child(ui::outline_button(&t, "export").child(i18n::t!("app.topbar.export")).on_click(cx.listener(|this, _, window, cx| this.save(true, window, cx))))
+            .child(file_menu)
             .child(
                 ui::filled_button(&t, "new-person", t.accent)
                     .child(i18n::t!("app.topbar.new_person"))

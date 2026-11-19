@@ -2,6 +2,7 @@
 app.cli.usage = usage : genealogy-rs [FICHIER.ged]\n\nExplorez et modifiez des arbres généalogiques GEDCOM.
 app.menu.quit = Quitter gen
 app.file.open_prompt = Ouvrir un GEDCOM
+app.file.import_prompt = Importer un autre arbre (GEDCOM)
 
 app.topbar.people.one = {n} personne
 app.topbar.people.other = {n} personnes
@@ -13,7 +14,10 @@ app.topbar.search = Rechercher une personne, un lieu, une année
 app.topbar.undo = Annuler (⌘Z)
 app.topbar.redo = Rétablir (⌘⇧Z)
 app.topbar.open = Ouvrir un fichier
-app.topbar.export = Exporter en GEDCOM
+app.topbar.file_menu = Importer / exporter
+app.topbar.save_as = Enregistrer sous… (GEDCOM 5.5.1)
+app.topbar.export7 = Exporter en GEDCOM 7…
+app.topbar.import = Importer un autre arbre…
 app.topbar.new_person = + Personne
 
 app.tab.pedigree = Ascendance
@@ -104,6 +108,19 @@ app.toast.undone = Annulé
 app.toast.redone = Rétabli
 app.toast.deleted = Personne supprimée (⌘Z pour annuler)
 app.toast.merged = Personnes fusionnées
+app.toast.exported7 = Exporté en GEDCOM 7 dans {arg}
+app.toast.import_empty = Le fichier ne contient aucun enregistrement à importer
+app.toast.imported = Importé : {people}, {families}, {sources}
+app.toast.imported_other = Importé : {people}, {families}, {sources}, {other}
+app.toast.import_merge_hint = Certaines personnes sont peut-être en double : vérifiez dans Révision (⌘⇧R) et fusionnez-les avec « Fusionner avec une autre personne… ».
+app.import.people.one = {n} personne
+app.import.people.other = {n} personnes
+app.import.families.one = {n} famille
+app.import.families.other = {n} familles
+app.import.sources.one = {n} source
+app.import.sources.other = {n} sources
+app.import.other.one = {n} autre enregistrement
+app.import.other.other = {n} autres enregistrements
 app.toast.undo = Annuler
 
 app.error.not_found = le fichier n'existe pas

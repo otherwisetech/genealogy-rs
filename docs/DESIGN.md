@@ -91,7 +91,7 @@ avatar "?") · Empty slot («+ Añadir madre», dashed; hover → accent).
 **Top bar (56):** logo (accent rounded square with tree glyph) · tree name (Fraunces 16, e.g.
 «Familia Ordóñez») with subtitle «132 personas · 31 familias · guardado» (or «sin guardar») ·
 segmented tabs **Pedigrí | Descendientes | Abanico | Lista | Mapa** · search field «Buscar persona, lugar,
-año» with ⌘K hint (opens the palette) · undo, redo icons · «Exportar GEDCOM» outline button ·
+año» with ⌘K hint (opens the palette) · undo, redo icons · «Importar / exportar» menu button (see Import / export) ·
 «+ Persona» accent button.
 
 **Canvas overlays:** top-left breadcrumb pill «Juan de Dios › Miguel › Ramona» (clickable);
@@ -287,3 +287,20 @@ first; a row click selects that place and centres the map there. The map draws a
 coordinates. Event rows add the relationship to the focus («Nacimiento · 1850 · tatarabuelo»,
 `Tree::kinship`), computed 12 per frame and cached per (revision, focus, language). Lists are
 capped (8 branches, 12 pairs, 10 migrations, then «y N más»); the panel scrolls.
+
+## Import / export
+
+Top-bar «Importar / exportar» (`ui::menu_button`, menu anchored top-right):
+- «Guardar como… (GEDCOM 5.5.1)» — the usual Save As (⌘⇧S); the file stays lossless 5.5.1.
+- «Exportar GEDCOM 7…» — writes a 7.0 copy (`Tree::to_gedcom7`, rules in
+  `crates/gedcom/src/gedcom7.rs`); the open file, its path and the «sin guardar» state don't
+  change. Toast «Exportado como GEDCOM 7 en X».
+- «Importar otro árbol…» — pick a `.ged`, parse it off the UI thread and append every record
+  (`Tree::import`, `crates/gedcom/src/import.rs`: fresh non-colliding ids, every pointer
+  rewritten, nothing merged) as one undo step; the tree becomes unsaved. A 10 s toast reports
+  «Importado: 12 personas, 4 familias, 2 fuentes» and, on a second line, suggests checking
+  Revisión (⌘⇧R) for duplicates and joining them with «Unir con otra persona…». With no focus
+  yet, the first imported person is focused.
+
+Online trees (FamilySearch, Ancestry, MyHeritage) are not contacted: FamilySearch has no public
+API without a partner key, and their GEDCOM downloads open or import directly.

@@ -5,7 +5,7 @@ use crate::palette::{Palette, PaletteEvent};
 use crate::pedigree::layout::{self, Layout, V2, View, v2};
 use crate::settings::Settings;
 use crate::theme::{self, SANS, tokens};
-use gedcom::{EditError, Sex, Tree};
+use gedcom::{EditError, ImportReport, Sex, Tree};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
 use gpui_component::Theme;
@@ -26,6 +26,8 @@ const UNDO_LIMIT: usize = 100;
 const ANIM: Duration = Duration::from_millis(200);
 pub(crate) const HOVER_DELAY: Duration = Duration::from_millis(300);
 const TOAST_FOR: Duration = Duration::from_secs(4);
+/// the import summary is longer and suggests a next step
+const IMPORT_TOAST_FOR: Duration = Duration::from_secs(10);
 
 pub fn bind_keys(cx: &mut App) {
     let c = Some(CANVAS_CONTEXT);
@@ -89,6 +91,33 @@ pub(crate) struct Toast {
     at: Instant,
     /// show a «Deshacer» action
     undo: bool,
+    /// import summary, rendered (localized) instead of `key`
+    report: Option<ImportReport>,
+    lasts: Duration,
+}
+
+impl Toast {
+    /// Built at render time so a language switch while it shows retranslates it.
+    fn lines(&self) -> Vec<String> {
+        match &self.report {
+            Some(r) => {
+                let others = r.records() - r.people - r.families - r.sources;
+                let counts = if others == 0 {
+                    i18n::t!("app.toast.imported", people = i18n::tn!("app.import.people", r.people), families = i18n::tn!("app.import.families", r.families), sources = i18n::tn!("app.import.sources", r.sources))
+                } else {
+                    i18n::t!(
+                        "app.toast.imported_other",
+                        people = i18n::tn!("app.import.people", r.people),
+                        families = i18n::tn!("app.import.families", r.families),
+                        sources = i18n::tn!("app.import.sources", r.sources),
+                        other = i18n::tn!("app.import.other", others)
+                    )
+                };
+                vec![counts, i18n::t!("app.toast.import_merge_hint")]
+            }
+            None => vec![i18n::tr(self.key, &[("arg", &self.arg)])],
+        }
+    }
 }
 
 struct Anim {
@@ -213,11 +242,16 @@ impl GenApp {
     }
 
     fn show_toast(&mut self, key: &'static str, arg: String, undo: bool, cx: &mut Context<Self>) {
-        self.toast = Some(Toast { key, arg, at: Instant::now(), undo });
+        self.put_toast(Toast { key, arg, at: Instant::now(), undo, report: None, lasts: TOAST_FOR }, cx);
+    }
+
+    fn put_toast(&mut self, toast: Toast, cx: &mut Context<Self>) {
+        let lasts = toast.lasts;
+        self.toast = Some(toast);
         cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(TOAST_FOR + Duration::from_millis(50)).await;
+            cx.background_executor().timer(lasts + Duration::from_millis(50)).await;
             this.update(cx, |this, cx| {
-                if this.toast.as_ref().is_some_and(|t| t.at.elapsed() >= TOAST_FOR) {
+                if this.toast.as_ref().is_some_and(|t| t.at.elapsed() >= t.lasts) {
                     this.toast = None;
                     cx.notify();
                 }
@@ -340,6 +374,64 @@ impl GenApp {
                 .detach();
             }
         }
+    }
+
+    /// Save a GEDCOM 7.0 copy; the open file, its path and the dirty flag stay as they are.
+    pub(crate) fn export_gedcom7(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let dir = self.path.as_deref().and_then(Path::parent).map(Path::to_path_buf).or_else(|| std::env::var_os("HOME").map(PathBuf::from)).unwrap_or_else(|| PathBuf::from("."));
+        let stem = self.path.as_deref().and_then(Path::file_stem).map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| self.tree.title());
+        let rx = cx.prompt_for_new_path(&dir, Some(&format!("{stem}-gedcom7.ged")));
+        let tree = self.tree.clone();
+        cx.spawn_in(window, async move |this, cx| {
+            if let Ok(Ok(Some(p))) = rx.await {
+                let res = gedcom::save_gedcom7(&tree, &p);
+                this.update(cx, |this, cx| match res {
+                    Ok(()) => this.toast("app.toast.exported7", p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(), cx),
+                    Err(e) => this.toast("app.toast.save_failed", io_error(&e), cx),
+                })
+                .ok();
+            }
+        })
+        .detach();
+    }
+
+    /// Pick another GEDCOM and append all its records to the open tree as one undo step.
+    pub(crate) fn import_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let rx = cx.prompt_for_paths(PathPromptOptions { files: true, directories: false, multiple: false, prompt: Some(i18n::t!("app.file.import_prompt").into()) });
+        cx.spawn_in(window, async move |this, cx| {
+            let Ok(Ok(Some(paths))) = rx.await else { return };
+            let Some(path) = paths.into_iter().next() else { return };
+            let res = cx.background_executor().spawn({
+                let path = path.clone();
+                async move { gedcom::load(&path) }
+            });
+            let res = res.await;
+            this.update_in(cx, |this, window, cx| match res {
+                Ok(Ok(other)) => this.import_tree(other, window, cx),
+                Ok(Err(e)) => this.toast("app.toast.invalid_file", e.to_string(), cx),
+                Err(e) => this.toast("app.toast.read_failed", format!("{}: {}", path.display(), io_error(&e)), cx),
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    fn import_tree(&mut self, other: Tree, window: &mut Window, cx: &mut Context<Self>) {
+        let mut report = ImportReport::default();
+        self.edit(window, cx, |t| {
+            report = t.import(&other);
+            Ok(report.records() > 0)
+        });
+        if report.records() == 0 {
+            self.toast("app.toast.import_empty", "", cx);
+            return;
+        }
+        if self.focus_id.is_none()
+            && let Some(first) = report.first_person.clone()
+        {
+            self.set_focus(first, false, window, cx);
+        }
+        self.put_toast(Toast { key: "app.toast.imported", arg: String::new(), at: Instant::now(), undo: false, report: Some(report), lasts: IMPORT_TOAST_FOR }, cx);
     }
 
     fn write_to(&mut self, path: PathBuf, window: &mut Window, cx: &mut Context<Self>) {
@@ -989,7 +1081,7 @@ impl Render for GenApp {
                         .bg(t.ink)
                         .text_color(t.on_fill())
                         .text_size(px(13.))
-                        .child(i18n::tr(toast.key, &[("arg", &toast.arg)]))
+                        .child(div().flex().flex_col().gap(px(2.)).children(toast.lines()))
                         .when(toast.undo, |d| {
                             d.child(
                                 div()

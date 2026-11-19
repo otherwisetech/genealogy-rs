@@ -1,0 +1,75 @@
+0 HEAD
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 SOUR TEST
+1 FILE legacy551.ged
+1 SUBM @U1@
+0 @U1@ SUBM
+1 NAME Persona Ficticia
+1 LANG Spanish
+0 @I1@ INDI
+1 NAME Abel /Prueba/
+2 GIVN Abel
+2 SURN Prueba
+1 SEX M
+1 BIRT
+2 DATE ABT 1820
+2 PLAC Villa Ejemplo
+1 CHR
+2 DATE INT 1850 (dicho por la abuela)
+1 DEAT
+2 DATE hacia la cosecha
+1 BURI
+2 DATE @#DJULIAN@ 3 FEB 1700
+1 _UID ABC123
+1 RIN 77
+1 NOTE @N1@
+1 NOTE Nota en línea.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Bea /Ensayo/
+2 TYPE apodo
+2 _MARNM Prueba
+1 SEX F
+1 EMAIL ana@@example.com
+1 NOTE @@inicio con arroba
+1 SOUR Libro de bautismos, folio 3
+2 PAGE p. 3
+2 TEXT Bautizada el día tres
+1 BIRT
+2 DATE 1825
+1 SOUR Libro de bautismos, folio 3
+2 TEXT Bautizada el día tres
+1 ASSO @I1@
+2 RELA GODP
+1 ASSO @x-1@
+2 RELA vecina
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Ciro /Prueba Ensayo/
+1 SEX M
+1 OBJE
+2 FILE retrato.jpg
+3 FORM jpg
+4 MEDI photo
+3 TITL Retrato
+1 FAMC @F1@
+2 PEDI birth
+1 FAMC @F99@
+0 @x-1@ INDI
+1 NAME Dora /Vecina/
+1 SEX F
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I3@
+1 MARR
+2 DATE 1845
+0 @N1@ NOTE Una nota compartida que sigue
+1 CONC  en otra línea física.
+1 CONT Segunda línea
+0 @S1@ SOUR
+1 TITL Registro civil
+0 TRLR
