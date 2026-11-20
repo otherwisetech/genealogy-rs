@@ -11,6 +11,9 @@ app.about.location = Wyoming, EUA
 app.about.website = Visitar {site}
 app.about.source = Código-fonte no GitHub
 app.about.license = Código aberto · MIT ou Apache-2.0
+app.star.label = Dar uma estrela no GitHub
+app.star.tooltip = Gostou? Dê uma estrela
+app.star.ask = Se este app ajuda você, uma estrela ajuda outras pessoas a encontrá-lo.
 app.file.open_prompt = Abrir GEDCOM
 app.file.import_prompt = Importar outra árvore (GEDCOM)
 
@@ -216,4 +219,4 @@ app.update.available = Há uma nova versão ({version})
 app.update.download = Ver download
 app.update.dismiss = Ocultar
 app.update.setting = Procurar atualizações ao abrir
-app.update.setting_hint = Consulta o GitHub (api.github.com) uma vez por dia. Não envia dados da árvore.
+app.update.setting_hint = Consulta o GitHub (api.github.com) uma vez por dia sobre novas versões e o número de estrelas. Não envia dados da árvore.
