@@ -15,6 +15,7 @@ mod pedigree;
 mod review;
 mod settings;
 mod sheet;
+mod star;
 mod theme;
 mod topbar;
 mod ui;

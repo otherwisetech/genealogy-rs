@@ -16,7 +16,6 @@ const WIDTH: Pixels = px(420.);
 const LOGO_SIZE: Pixels = px(88.);
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const WEBSITE_HOST: &str = "otherwisetech.com"; // i18n-ok: domain
-const REPO_URL: &str = "https://github.com/otherwisetech/genealogy-rs";
 const LOGO_PNG: &[u8] = include_bytes!("../assets/logo/gen-icon-1024.png");
 
 static LOGO: LazyLock<Arc<Image>> = LazyLock::new(|| Arc::new(Image::from_bytes(ImageFormat::Png, LOGO_PNG.to_vec())));
@@ -53,8 +52,8 @@ impl AboutDialog {
     }
 }
 
-fn link(t: &Tokens, id: &'static str, label: String, url: &'static str) -> Stateful<Div> {
-    div().id(id).text_size(px(13.)).text_color(t.accent).cursor_pointer().hover(|s| s.underline()).child(label).on_click(move |_, _, cx| cx.open_url(url))
+fn link(t: &Tokens, id: &'static str, label: String) -> Stateful<Div> {
+    div().id(id).text_size(px(13.)).text_color(t.accent).cursor_pointer().hover(|s| s.underline()).child(label).on_click(|_, _, cx| cx.open_url(&crate::star::repo_url()))
 }
 
 impl Render for AboutDialog {
@@ -106,7 +105,8 @@ impl Render for AboutDialog {
                             .child(div().pt(px(16.)).text_size(px(13.)).font_weight(FontWeight::MEDIUM).text_color(t.ink).child(i18n::t!("app.about.developed_by", company = crate::DEVELOPER)))
                             .child(muted(i18n::t!("app.about.location")))
                             .child(div().pt(px(20.)).child(ui::filled_button(&t, "about-website", t.accent).child(i18n::t!("app.about.website", site = WEBSITE_HOST)).on_click(|_, _, cx| cx.open_url(crate::DEVELOPER_URL))))
-                            .child(div().pt(px(10.)).child(link(&t, "about-source", i18n::t!("app.about.source"), REPO_URL)))
+                            .child(div().pt(px(12.)).flex().items_center().gap(px(14.)).child(link(&t, "about-source", i18n::t!("app.about.source"))).child(crate::star::about_button(&t, cx)))
+                            .child(div().pt(px(6.)).text_size(px(12.)).text_color(t.ink_muted).child(i18n::t!("app.star.ask")))
                             .child(div().pt(px(14.)).text_size(px(11.)).text_color(t.ink_muted).child(i18n::t!("app.about.license"))),
                     )
                     // after the body so it paints, and takes clicks, on top
@@ -119,7 +119,7 @@ impl GenApp {
     /// Slim bar under the main area on every screen; clicking it opens «Acerca de».
     pub(crate) fn render_footer(&self, t: &Tokens, cx: &mut Context<Self>) -> impl IntoElement {
         let hover = t.ink;
-        div().flex().flex_none().items_center().justify_end().h(px(24.)).px(px(12.)).border_t_1().border_color(t.border).bg(t.surface).child(
+        div().flex().flex_none().items_center().justify_end().gap(px(12.)).h(px(24.)).px(px(12.)).border_t_1().border_color(t.border).bg(t.surface).child(crate::star::footer_link(t, cx)).child(
             div()
                 .id("about-footer")
                 .text_size(px(11.))

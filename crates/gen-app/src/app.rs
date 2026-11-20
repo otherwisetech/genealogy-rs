@@ -244,6 +244,7 @@ impl GenApp {
             this.load(p, window, cx);
         }
         this.check_updates(cx);
+        crate::star::refresh(this.update_check, cx);
         this
     }
 
@@ -293,6 +294,7 @@ impl GenApp {
         let mut s = Settings::load();
         s.update_check = on;
         s.save();
+        crate::star::refresh(on, cx);
         if on {
             self.check_updates(cx);
         } else {

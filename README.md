@@ -62,6 +62,10 @@ request carries only a `genealogy-rs/<version>` User-Agent with the project URL,
 exists, a small notice offers to open the release page in your browser. Turn it off from the globe
 menu (*Check for updates on startup*).
 
+The same switch covers the star count next to *Star on GitHub* (footer and About): once a day the
+app reads `api.github.com/repos/otherwisetech/genealogy-rs` (no login, no user data) and caches the
+number; if that fails the count is simply not shown. Starring itself happens on github.com.
+
 ## Run
 
 ```sh
