@@ -155,6 +155,23 @@ fn structured(input: &str) -> Option<String> {
     })
 }
 
+/// Year, month and day of an exact date (no ABT / BEF / ranges / phrases): "12 MAR 1852" →
+/// (1852, Some(3), Some(12)), "MAR 1852" → (1852, Some(3), None), "1852" → (1852, None, None).
+pub fn exact_ymd(gedcom: &str) -> Option<(i32, Option<u32>, Option<u32>)> {
+    let v = DateValue::parse(gedcom);
+    if v.precision != Precision::Exact {
+        return None;
+    }
+    let parts: Vec<&str> = v.date.split_whitespace().collect();
+    let month = |m: &str| MONTHS.iter().position(|x| *x == m).map(|i| i as u32 + 1);
+    match parts.as_slice() {
+        [y] => Some((y.parse().ok()?, None, None)),
+        [m, y] => Some((y.parse().ok()?, Some(month(m)?), None)),
+        [d, m, y] => Some((y.parse().ok()?, Some(month(m)?), Some(d.parse().ok()?))),
+        _ => None,
+    }
+}
+
 /// Lenient user input → GEDCOM date: "12/3/1852", "12 mar 1852", "12 marzo 1852", "1852-03-12"
 /// → "12 MAR 1852". Unrecognized input is returned trimmed.
 pub fn normalize_date(input: &str) -> String {
@@ -207,6 +224,18 @@ mod tests {
         assert_eq!(DateValue::parse("INT 1850 (dicho por la abuela)"), dv(Precision::Phrase, "INT 1850 (dicho por la abuela)", ""));
         assert_eq!(DateValue::parse("(en la guerra)"), dv(Precision::Phrase, "(en la guerra)", ""));
         assert_eq!(DateValue::parse("BET 1800"), dv(Precision::Phrase, "BET 1800", ""));
+    }
+
+    #[test]
+    fn exact_dates_split_into_parts() {
+        assert_eq!(exact_ymd("12 MAR 1852"), Some((1852, Some(3), Some(12))));
+        assert_eq!(exact_ymd("3 aug 1901"), Some((1901, Some(8), Some(3))));
+        assert_eq!(exact_ymd("MAR 1852"), Some((1852, Some(3), None)));
+        assert_eq!(exact_ymd("1852"), Some((1852, None, None)));
+        assert_eq!(exact_ymd("ABT 12 MAR 1852"), None);
+        assert_eq!(exact_ymd("BET 1800 AND 1810"), None);
+        assert_eq!(exact_ymd("(en la guerra)"), None);
+        assert_eq!(exact_ymd(""), None);
     }
 
     #[test]

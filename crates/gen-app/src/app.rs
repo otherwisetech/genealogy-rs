@@ -181,6 +181,14 @@ pub struct GenApp {
     focus: FocusHandle,
     pub(crate) canvas_focus: FocusHandle,
     overlay_subs: Vec<Subscription>,
+    /// push people to the shared entity registry (opt-in)
+    pub(crate) share_people: bool,
+    /// birthdays and anniversaries in Otherwise Apps' Today
+    pub(crate) today_on: bool,
+    /// Vigía is installed: offer "Track a document in Vigía"
+    pub(crate) vigia_installed: bool,
+    /// a link asked for this person in a tree that is still loading
+    pub(crate) pending_person: Option<String>,
     _subs: Vec<Subscription>,
 }
 
@@ -238,8 +246,13 @@ impl GenApp {
             focus: cx.focus_handle(),
             canvas_focus,
             overlay_subs: vec![],
+            share_people: settings.share_people,
+            today_on: settings.today,
+            vigia_installed: false,
+            pending_person: None,
             _subs: subs,
         };
+        this.start_shared(window, cx);
         if let Some(p) = initial {
             this.load(p, window, cx);
         }
@@ -384,6 +397,7 @@ impl GenApp {
                             this.set_focus(first, false, window, cx);
                         }
                         this.update_title(window);
+                        this.after_load(window, cx);
                     }
                     Ok(Err(e)) => this.toast("app.toast.invalid_file", e.to_string(), cx),
                     Err(e) => this.toast("app.toast.read_failed", format!("{}: {}", path.display(), io_error(&e)), cx),
@@ -555,6 +569,7 @@ impl GenApp {
                 self.dirty = false;
                 self.update_title(window);
                 self.toast("app.toast.saved", name, cx);
+                self.publish_shared(cx);
             }
             Err(e) => self.toast("app.toast.save_failed", io_error(&e), cx),
         }

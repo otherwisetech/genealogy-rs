@@ -66,6 +66,42 @@ The same switch covers the star count next to *Star on GitHub* (footer and About
 app reads `api.github.com/repos/otherwisetech/genealogy-rs` (no login, no user data) and caches the
 number; if that fails the count is simply not shown. Starring itself happens on github.com.
 
+## Works with other Otherwise apps
+
+genealogy-rs uses [otherwise-link](https://github.com/otherwisetech/otherwise-link), the small
+layer Otherwise Technologies' apps share. Everything stays on your computer; both switches are in
+the globe (preferences) menu.
+
+- **Share people** (off by default). When it is on *and* the shared entity registry is turned on in
+  [Otherwise Apps](https://github.com/otherwisetech/otherwise-apps), every person of the open tree
+  becomes a *person* card other apps can use (mosaico tags photos with them, Vigía tracks their
+  documents). A card carries the name (given / family) and the **exact** birth and death dates;
+  notes, places, sources and everything else stay in your file. People are pushed when a tree is
+  opened or saved, only those that changed; nothing is ever deleted from the registry. A person's
+  id there comes from the record's `_UID` / `UID` when it has one, else from the file's path and
+  the record's xref.
+- **Today** (on by default): birthdays of living people and wedding anniversaries of living couples
+  in the next 14 days, from exact dates, appear in Otherwise Apps' *Today* view and open the
+  person here. The feed is `today/genealogy.json` in the shared Otherwise folder.
+- **Track a document in Vigía…** in a person's ⋯ menu (shown when Vigía is installed) shares that
+  person and opens Vigía's new-item form with them as the owner
+  (`otherwise://vigia/new?owner=<entity>&template=passport`).
+- **Links.** genealogy-rs opens `otherwise-genealogy://` links (also `otherwise://genealogy/…`
+  through Otherwise Apps):
+
+  | Link | Does |
+  |------|------|
+  | `otherwise://genealogy` | brings the window to the front |
+  | `otherwise://genealogy/open?file=/path/tree.ged` | opens that tree |
+  | `otherwise://genealogy/person?file=/path/tree.ged&id=I12` | opens the tree if needed and shows that person |
+  | `otherwise://genealogy/entity/<uuid>` | shows the person behind a shared entity, if it is in the open tree |
+
+  macOS registers the scheme from the app's `Info.plist`; Windows registers it for your user
+  (`HKCU\Software\Classes\otherwise-genealogy`) when the app starts; on Linux
+  `genealogy-rs.desktop` declares `x-scheme-handler/otherwise-genealogy` and the app makes itself
+  the handler when that file is in `~/.local/share/applications`.
+- **About** lists the other Otherwise apps installed on this computer; click one to open it.
+
 ## Run
 
 ```sh

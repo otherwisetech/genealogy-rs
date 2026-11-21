@@ -70,9 +70,18 @@ impl GenApp {
                 menu
             }
         });
+        let vigia = self.vigia_installed;
         let more = ui::menu_icon_button(t, "more", IconName::Ellipsis).dropdown_menu_with_anchor(Anchor::TopRight, {
             let (id, weak) = (id.clone(), weak.clone());
             move |menu, _, _| {
+                let (id5, w5) = (id.clone(), weak.clone());
+                let menu = if vigia {
+                    menu.item(PopupMenuItem::new(i18n::t!("app.sheet.track_vigia")).on_click(move |_, _, cx| {
+                        w5.update(cx, |this, cx| this.track_in_vigia(id5.clone(), cx)).ok();
+                    }))
+                } else {
+                    menu
+                };
                 let (id1, w1, id2, w2) = (id.clone(), weak.clone(), id.clone(), weak.clone());
                 let (id3, w3) = (id.clone(), weak.clone());
                 let (id4, w4) = (id.clone(), weak.clone());
