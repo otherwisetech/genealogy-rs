@@ -82,13 +82,15 @@ impl GenApp {
                 .item(PopupMenuItem::new(crate::about::menu_label()).on_click(move |_, window, cx| {
                     about.update(cx, |this, cx| this.open_about(window, cx)).ok();
                 }))
+                .item(PopupMenuItem::new(crate::vcity::menu_label()).on_click(|_, _, cx| crate::vcity::open(cx)))
         });
 
         let file_menu = ui::menu_button(&t, "file-menu", i18n::t!("app.topbar.file_menu")).dropdown_menu_with_anchor(Anchor::TopRight, {
             let weak = cx.entity().downgrade();
+            let has_file = self.path.is_some();
             move |menu, _, _| {
                 let (w1, w2, w3) = (weak.clone(), weak.clone(), weak.clone());
-                menu.item(PopupMenuItem::new(i18n::t!("app.topbar.save_as")).on_click(move |_, window, cx| {
+                let menu = menu.item(PopupMenuItem::new(i18n::t!("app.topbar.save_as")).on_click(move |_, window, cx| {
                     w1.update(cx, |this, cx| this.save(true, window, cx)).ok();
                 }))
                 .item(PopupMenuItem::new(i18n::t!("app.topbar.export7")).on_click(move |_, window, cx| {
@@ -97,7 +99,29 @@ impl GenApp {
                 .separator()
                 .item(PopupMenuItem::new(i18n::t!("app.topbar.import")).on_click(move |_, window, cx| {
                     w3.update(cx, |this, cx| this.import_dialog(window, cx)).ok();
-                }))
+                }));
+                let (w4, w5) = (weak.clone(), weak.clone());
+                let mut menu = menu
+                    .separator()
+                    .item(PopupMenuItem::new(i18n::t!("app.file.move_to")).disabled(!has_file).on_click(move |_, window, cx| {
+                        w4.update(cx, |this, cx| this.move_dialog(window, cx)).ok();
+                    }))
+                    .item(PopupMenuItem::new(crate::storage::reveal_label()).disabled(!has_file).on_click(move |_, _, cx| {
+                        w5.update(cx, |this, cx| this.reveal_file(cx)).ok();
+                    }));
+                let recent = crate::storage::Recent::load().files;
+                if !recent.is_empty() {
+                    menu = menu.separator().label(i18n::t!("app.file.recent"));
+                    for p in recent {
+                        let p = std::path::PathBuf::from(p);
+                        let w = weak.clone();
+                        menu = menu.item(PopupMenuItem::new(crate::files::recent_label(&p)).on_click(move |_, window, cx| {
+                            let p = p.clone();
+                            w.update(cx, |this, cx| this.open_recent(p, window, cx)).ok();
+                        }));
+                    }
+                }
+                menu
             }
         });
 

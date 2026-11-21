@@ -2126,7 +2126,7 @@ dependencies = [
 
 [[package]]
 name = "gen-app"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2148,7 +2148,7 @@ dependencies = [
 
 [[package]]
 name = "gen-gedcom"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "gen-i18n",
  "thiserror 2.0.20",
@@ -2156,7 +2156,7 @@ dependencies = [
 
 [[package]]
 name = "gen-i18n"
-version = "0.4.0"
+version = "0.5.0"
 
 [[package]]
 name = "generic-array"
@@ -4664,8 +4664,8 @@ dependencies = [
 
 [[package]]
 name = "otherwise-link"
-version = "0.1.0"
-source = "git+https://github.com/otherwisetech/otherwise-link?tag=v0.1.0#0b2969806dcac2adc79c9f21f6bd72a98d8e0be2"
+version = "0.2.0"
+source = "git+https://github.com/otherwisetech/otherwise-link?tag=v0.2.0#8e4cc8c298e9c5c37a7c02bc061e1c8fbee50b2f"
 dependencies = [
  "chrono",
  "rusqlite",

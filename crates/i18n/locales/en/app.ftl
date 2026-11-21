@@ -235,3 +235,35 @@ app.toast.registry_off = Turn on shared entities in Otherwise Apps (Entities) to
 app.toast.sharing_on = People of the open tree are shared with your other Otherwise apps when it is opened or saved.
 app.toast.vigia_failed = Couldn’t open Vigía.
 app.toast.vigia_save_first = Save the tree first, then track documents in Vigía.
+
+# file location, recent trees, cloud safety
+app.menu.file = File
+app.menu.help = Help
+app.menu.open = Open…
+app.menu.save = Save
+app.menu.save_as = Save As…
+app.file.move_to = Move to…
+app.file.reveal_macos = Show in Finder
+app.file.reveal_windows = Show in Explorer
+app.file.reveal_linux = Show in file manager
+app.file.recent = Recent trees
+app.file.recent_item = {name} — {dir}
+app.file.recent_missing = {name} — {dir} (not found)
+app.file.locked_elsewhere = This tree is open on {host}. It is read-only here so the two computers don’t overwrite each other.
+app.file.open_here = This tree is already open in another genealogy-rs window. It is read-only here.
+app.file.taken_over = {host} took this tree over. Changes made here won’t be saved to it; use Save As… to keep them.
+app.file.conflicts.one = Your sync service left {n} conflicted copy of this tree next to it.
+app.file.conflicts.other = Your sync service left {n} conflicted copies of this tree next to it.
+app.file.missing = {name} is no longer in {dir}.
+app.file.locate = Locate…
+app.file.forget = Remove from list
+app.file.use_here = Use here anyway
+app.toast.save_first = Save the tree first.
+app.toast.read_only = The tree is open elsewhere: save a copy with Save As…
+app.toast.move_exists = There is already a file named {arg} there.
+app.toast.moved = Moved to {arg}
+app.toast.move_failed = Could not move the tree (it is still in its old place): {arg}
+
+# Vcity
+app.vcity.menu = Create your store on Vcity
+app.vcity.pitch = Sell products or services? Create your business’s online store on Vcity — catalog, orders, payments, bookings, customer chat and more.

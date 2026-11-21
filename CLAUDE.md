@@ -9,7 +9,11 @@ crates/i18n     gen-i18n: embedded translation catalogs, t!/tn!/tv! macros, loca
 crates/gedcom   gen-gedcom: lossless GEDCOM parser/writer, tree model, edits, search — no UI
 crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component); otherwise.rs: otherwise-link
                 logic (links, entity cards, registry push, Today events; tested), shared.rs: the
-                window's side of it (link pump, publish after load/save, Vigía action)
+                window's side of it (link pump, publish after load/save, Vigía action);
+                storage.rs: the app's own folder `<data root>/genealogy/` (settings, caches,
+                recent.json), one-time migration from the old config folder, default save folder
+                (never temp); files.rs: the open tree's lock / conflicted copies / Move to… /
+                Show in Finder / recent + Locate…; vcity.rs: the Vcity invitation (About + Help)
 ```
 
 ## Rules
@@ -40,6 +44,9 @@ crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component); otherwise.rs
   sources. Pushing is opt-in (`share_people`, plus the registry's own opt-in), incremental
   (`otherwise-sync.json`), and never deletes or merges in the registry. otherwise-link is pinned
   by git tag and must only add its own crates to Cargo.lock; tests use temp dirs (`Root::at`).
+- The app's own files go through `storage::app_dir()`; never write next to a tree except its
+  `.lock.json` (released on close). Moves use otherwise-link's verified `storage::move_any`,
+  never a plain copy + delete. Migration never overwrites a file at the new place.
 - Comments: sparse, only non-obvious why.
 - Disk-heavy GPUI build: `cargo build -p gen-app` (dev profile has no debuginfo on purpose).
 
