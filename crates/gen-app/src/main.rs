@@ -5,6 +5,7 @@ mod about;
 mod app;
 mod edit_dialog;
 mod fan;
+mod files;
 mod kinship_dialog;
 mod list;
 mod map;
@@ -18,6 +19,8 @@ mod settings;
 mod shared;
 mod sheet;
 mod star;
+mod storage;
+mod vcity;
 mod theme;
 mod topbar;
 mod ui;
@@ -29,7 +32,7 @@ use gpui_component_assets::Assets;
 use std::borrow::Cow;
 use std::path::PathBuf;
 
-actions!(genealogy, [Quit, OpenDeveloperSite, ShowAbout]);
+actions!(genealogy, [Quit, OpenDeveloperSite, ShowAbout, OpenVcity]);
 
 pub(crate) const APP_NAME: &str = "genealogy-rs"; // i18n-ok: product name
 pub(crate) const DEVELOPER: &str = "Otherwise Technologies LLC"; // i18n-ok: company name
@@ -43,7 +46,19 @@ pub(crate) fn developer_credit() -> String {
 /// The native menu bar holds plain strings, so it is rebuilt on every language switch.
 pub(crate) fn set_app_menus(cx: &mut App) {
     let items = vec![MenuItem::action(about::menu_label(), ShowAbout), MenuItem::action(developer_credit(), OpenDeveloperSite), MenuItem::separator(), MenuItem::action(i18n::t!("app.menu.quit"), Quit)];
-    cx.set_menus(vec![Menu { name: APP_NAME.into(), items, disabled: false }]);
+    let file = vec![
+        MenuItem::action(i18n::t!("app.menu.open"), app::Open),
+        MenuItem::action(i18n::t!("app.menu.save"), app::Save),
+        MenuItem::action(i18n::t!("app.menu.save_as"), app::SaveAs),
+        MenuItem::action(i18n::t!("app.file.move_to"), app::MoveTo),
+        MenuItem::action(storage::reveal_label(), app::RevealFile),
+    ];
+    let help = vec![MenuItem::action(vcity::menu_label(), OpenVcity)];
+    cx.set_menus(vec![
+        Menu { name: APP_NAME.into(), items, disabled: false },
+        Menu { name: i18n::t!("app.menu.file").into(), items: file, disabled: false },
+        Menu { name: i18n::t!("app.menu.help").into(), items: help, disabled: false },
+    ]);
 }
 
 /// gpui-component's icon set plus our own `icons/*.svg`.
@@ -93,6 +108,7 @@ const FONTS: [&[u8]; 4] = [
 ];
 
 fn main() {
+    storage::migrate_on_startup();
     i18n::set_locale(settings::initial_language(&settings::Settings::load()));
     let initial: Option<PathBuf> = open_files::path_from_args(std::env::args().skip(1));
     if matches!(initial.as_deref().and_then(|p| p.to_str()), Some("-h" | "--help")) {
@@ -135,6 +151,7 @@ fn main() {
         cx.bind_keys([KeyBinding::new("cmd-q", Quit, None)]);
         cx.on_action(|_: &Quit, cx| cx.quit());
         cx.on_action(|_: &OpenDeveloperSite, cx| cx.open_url(DEVELOPER_URL));
+        cx.on_action(|_: &OpenVcity, cx| vcity::open(cx));
         gpui_component::set_locale(i18n::locale());
         set_app_menus(cx);
         cx.on_window_closed(|cx, _| cx.quit()).detach();

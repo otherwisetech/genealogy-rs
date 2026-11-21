@@ -102,6 +102,26 @@ the globe (preferences) menu.
   the handler when that file is in `~/.local/share/applications`.
 - **About** lists the other Otherwise apps installed on this computer; click one to open it.
 
+## Where files live
+
+- **Your trees** stay wherever you save them. A new tree is offered the folder you used last, else
+  the Otherwise data folder (`~/.otherwise/genealogy/`, or wherever you moved the data root in
+  Otherwise Apps); never a temp folder. **Import / export** has *Move to…* (verified copy, the
+  original deleted only afterwards), *Show in Finder* and your **recent trees**; a tree that moved
+  shows *Locate…* / *Remove from list*. The native **File** menu has the same.
+- **Cloud folders** (OneDrive, Dropbox, iCloud Drive, Google Drive): an open tree is marked with a
+  small `<file>.lock.json` next to it. Opened on a second computer while the first still has it,
+  it opens read-only there (*Use here anyway* takes it over), and conflicted copies left by the
+  sync client are pointed out with *Show in Finder*.
+- **The app's own files** (settings, `recent.json`, `otherwise-sync.json`, the geocoding and tile
+  caches) live in `~/.otherwise/genealogy/`. Version 0.5 moves them there once from the old
+  folder (`~/Library/Application Support/genealogy-rs`, `%APPDATA%\genealogy-rs`,
+  `~/.config/genealogy-rs`), never overwriting anything, and leaves a `.migrated-to-otherwise`
+  note behind. `OTHERWISE_DATA_DIR` points the data root elsewhere (tests, portable setups).
+- **Help → Crea tu tienda en Vcity** (also in About): a short invitation to
+  [Vcity](https://vcity.io), online stores for businesses. The link only carries
+  `utm_source=genealogy`; nothing about you.
+
 ## Run
 
 ```sh

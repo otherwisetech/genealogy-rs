@@ -234,3 +234,35 @@ app.toast.registry_off = Activez les entités partagées dans Otherwise Apps (En
 app.toast.sharing_on = Les personnes de l’arbre ouvert sont partagées avec vos autres apps Otherwise à l’ouverture et à l’enregistrement.
 app.toast.vigia_failed = Impossible d’ouvrir Vigía.
 app.toast.vigia_save_first = Enregistrez d’abord l’arbre, puis suivez des documents dans Vigía.
+
+# file location, recent trees, cloud safety
+app.menu.file = Fichier
+app.menu.help = Aide
+app.menu.open = Ouvrir…
+app.menu.save = Enregistrer
+app.menu.save_as = Enregistrer sous…
+app.file.move_to = Déplacer vers…
+app.file.reveal_macos = Afficher dans le Finder
+app.file.reveal_windows = Afficher dans l’Explorateur
+app.file.reveal_linux = Afficher dans le gestionnaire de fichiers
+app.file.recent = Arbres récents
+app.file.recent_item = {name} — {dir}
+app.file.recent_missing = {name} — {dir} (introuvable)
+app.file.locked_elsewhere = Cet arbre est ouvert sur {host}. Il est en lecture seule ici pour que les deux ordinateurs ne s’écrasent pas.
+app.file.open_here = Cet arbre est déjà ouvert dans une autre fenêtre de genealogy-rs. Il est en lecture seule ici.
+app.file.taken_over = {host} a repris cet arbre. Les modifications faites ici n’y seront pas enregistrées ; utilisez Enregistrer sous… pour les garder.
+app.file.conflicts.one = Votre service de synchronisation a laissé {n} copie en conflit de cet arbre à côté de lui.
+app.file.conflicts.other = Votre service de synchronisation a laissé {n} copies en conflit de cet arbre à côté de lui.
+app.file.missing = {name} n’est plus dans {dir}.
+app.file.locate = Localiser…
+app.file.forget = Retirer de la liste
+app.file.use_here = Utiliser ici quand même
+app.toast.save_first = Enregistrez d’abord l’arbre.
+app.toast.read_only = L’arbre est ouvert ailleurs : enregistrez une copie avec Enregistrer sous…
+app.toast.move_exists = Il y a déjà un fichier nommé {arg} à cet endroit.
+app.toast.moved = Déplacé vers {arg}
+app.toast.move_failed = Impossible de déplacer l’arbre (il est toujours à son ancien emplacement) : {arg}
+
+# Vcity
+app.vcity.menu = Créez votre boutique sur Vcity
+app.vcity.pitch = Vous vendez des produits ou des services ? Créez la boutique en ligne de votre entreprise sur Vcity : catalogue, commandes, paiements, réservations, chat avec les clients et bien plus encore.

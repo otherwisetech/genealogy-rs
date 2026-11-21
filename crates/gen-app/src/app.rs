@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 
 actions!(
     gen_app,
-    [Open, Save, SaveAs, NewTree, Undo, Redo, OpenPalette, Back, NavLeft, NavRight, NavUp, NavDown, CenterFocus, EditFocus, ZoomIn, ZoomOut, ZoomReset, FitView, CloseRaw, MoreGenerations, FewerGenerations]
+    [Open, Save, SaveAs, NewTree, Undo, Redo, OpenPalette, Back, NavLeft, NavRight, NavUp, NavDown, CenterFocus, EditFocus, ZoomIn, ZoomOut, ZoomReset, FitView, CloseRaw, MoreGenerations, FewerGenerations, MoveTo, RevealFile]
 );
 
 pub(crate) const KEY_CONTEXT: &str = "GenApp";
@@ -189,6 +189,11 @@ pub struct GenApp {
     pub(crate) vigia_installed: bool,
     /// a link asked for this person in a tree that is still loading
     pub(crate) pending_person: Option<String>,
+    /// lock on the open file (none for a new tree, or while another computer has it)
+    pub(crate) lock: Option<otherwise_link::lock::Lock>,
+    /// open elsewhere: Save goes to Save As
+    pub(crate) read_only: bool,
+    pub(crate) file_notice: Option<crate::files::FileNotice>,
     _subs: Vec<Subscription>,
 }
 
@@ -250,9 +255,13 @@ impl GenApp {
             today_on: settings.today,
             vigia_installed: false,
             pending_person: None,
+            lock: None,
+            read_only: false,
+            file_notice: None,
             _subs: subs,
         };
         this.start_shared(window, cx);
+        this.start_lock_heartbeat(cx);
         if let Some(p) = initial {
             this.load(p, window, cx);
         }
@@ -314,6 +323,10 @@ impl GenApp {
             self.update = None;
         }
         cx.notify();
+    }
+
+    pub(crate) fn has_update_notice(&self) -> bool {
+        self.update.is_some()
     }
 
     fn render_update_notice(&self, cx: &mut Context<Self>) -> Option<impl IntoElement> {
@@ -393,6 +406,7 @@ impl GenApp {
                     Ok(Ok(tree)) => {
                         let first = tree.order.first().cloned();
                         this.reset_tree(tree, Some(path.clone()));
+                        this.attach_file(&path, cx);
                         if let Some(first) = first {
                             this.set_focus(first, false, window, cx);
                         }
@@ -429,7 +443,7 @@ impl GenApp {
         format!("{name}{} — {}", if self.dirty { " •" } else { "" }, crate::APP_NAME)
     }
 
-    fn update_title(&self, window: &mut Window) {
+    pub(crate) fn update_title(&self, window: &mut Window) {
         window.set_window_title(&self.window_title());
     }
 
@@ -478,19 +492,24 @@ impl GenApp {
         let mut tree = Tree::new_empty();
         let id = tree.add_person("", "", Sex::Unknown);
         self.reset_tree(tree, None);
+        self.detach_file();
         self.set_focus(id.clone(), false, window, cx);
         self.update_title(window);
         self.open_edit(id, window, cx);
     }
 
     pub(crate) fn save(&mut self, save_as: bool, window: &mut Window, cx: &mut Context<Self>) {
+        if !save_as && self.path.is_some() && self.read_only {
+            self.toast("app.toast.read_only", "", cx);
+            return self.save(true, window, cx);
+        }
         match (&self.path, save_as) {
             (Some(p), false) => {
                 let p = p.clone();
                 self.write_to(p, window, cx);
             }
             _ => {
-                let dir = self.path.as_deref().and_then(Path::parent).map(Path::to_path_buf).or_else(|| std::env::var_os("HOME").map(PathBuf::from)).unwrap_or_else(|| PathBuf::from("."));
+                let dir = crate::storage::save_dir(self.path.as_deref(), crate::storage::Recent::load().last_dir().as_deref());
                 let name = self.path.as_deref().and_then(Path::file_name).map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| format!("{}.ged", self.tree.title()));
                 let rx = cx.prompt_for_new_path(&dir, Some(&name));
                 cx.spawn_in(window, async move |this, cx| {
@@ -505,7 +524,7 @@ impl GenApp {
 
     /// Save a GEDCOM 7.0 copy; the open file, its path and the dirty flag stay as they are.
     pub(crate) fn export_gedcom7(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let dir = self.path.as_deref().and_then(Path::parent).map(Path::to_path_buf).or_else(|| std::env::var_os("HOME").map(PathBuf::from)).unwrap_or_else(|| PathBuf::from("."));
+        let dir = crate::storage::save_dir(self.path.as_deref(), crate::storage::Recent::load().last_dir().as_deref());
         let stem = self.path.as_deref().and_then(Path::file_stem).map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| self.tree.title());
         let rx = cx.prompt_for_new_path(&dir, Some(&format!("{stem}-gedcom7.ged")));
         let tree = self.tree.clone();
@@ -565,8 +584,9 @@ impl GenApp {
         match gedcom::save(&self.tree, &path) {
             Ok(()) => {
                 let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-                self.path = Some(path);
+                self.path = Some(path.clone());
                 self.dirty = false;
+                self.attach_file(&path, cx);
                 self.update_title(window);
                 self.toast("app.toast.saved", name, cx);
                 self.publish_shared(cx);
@@ -1250,6 +1270,8 @@ impl Render for GenApp {
             .on_action(cx.listener(|this, _: &Open, window, cx| this.open_dialog(window, cx)))
             .on_action(cx.listener(|this, _: &Save, window, cx| this.save(false, window, cx)))
             .on_action(cx.listener(|this, _: &SaveAs, window, cx| this.save(true, window, cx)))
+            .on_action(cx.listener(|this, _: &MoveTo, window, cx| this.move_dialog(window, cx)))
+            .on_action(cx.listener(|this, _: &RevealFile, _, cx| this.reveal_file(cx)))
             .on_action(cx.listener(|this, _: &NewTree, window, cx| this.new_tree(window, cx)))
             .on_action(cx.listener(|this, _: &Undo, window, cx| this.undo(false, window, cx)))
             .on_action(cx.listener(|this, _: &Redo, window, cx| this.undo(true, window, cx)))
@@ -1283,6 +1305,7 @@ impl Render for GenApp {
             .child(self.render_footer(&t, cx))
             .children(toast)
             .children(self.render_update_notice(cx))
+            .children(self.render_file_notice(cx))
             .when_some(self.palette.clone(), |d, p| d.child(p))
             .when_some(self.edit_dialog.clone(), |d, e| d.child(e))
             .when_some(self.merge_dialog.clone(), |d, m| d.child(m))
