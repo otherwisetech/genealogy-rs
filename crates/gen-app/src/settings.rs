@@ -26,27 +26,15 @@ impl Default for Settings {
     }
 }
 
+/// `<data root>/genealogy/` (moved there from the platform config folder in 0.5, see
+/// `storage.rs`).
 pub(crate) fn dir() -> Option<PathBuf> {
-    if cfg!(windows) {
-        return std::env::var_os("APPDATA").filter(|v| !v.is_empty()).map(|d| PathBuf::from(d).join("genealogy-rs"));
-    }
-    let home = std::env::var_os("HOME").map(PathBuf::from);
-    if cfg!(target_os = "macos") {
-        return home.map(|h| h.join("Library/Application Support/genealogy-rs"));
-    }
-    std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).or_else(|| home.map(|h| h.join(".config"))).map(|d| d.join("genealogy-rs"))
+    Some(crate::storage::app_dir())
 }
 
 /// Per-user cache directory (map tiles); safe to delete.
 pub(crate) fn cache_dir() -> Option<PathBuf> {
-    if cfg!(windows) {
-        return std::env::var_os("LOCALAPPDATA").filter(|v| !v.is_empty()).map(|d| PathBuf::from(d).join("genealogy-rs"));
-    }
-    let home = std::env::var_os("HOME").map(PathBuf::from);
-    if cfg!(target_os = "macos") {
-        return home.map(|h| h.join("Library/Caches/genealogy-rs"));
-    }
-    std::env::var_os("XDG_CACHE_HOME").filter(|v| !v.is_empty()).map(PathBuf::from).or_else(|| home.map(|h| h.join(".cache"))).map(|d| d.join("genealogy-rs"))
+    Some(crate::storage::cache_dir())
 }
 
 fn file() -> Option<PathBuf> {

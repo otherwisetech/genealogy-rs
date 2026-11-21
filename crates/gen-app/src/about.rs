@@ -148,6 +148,7 @@ impl Render for AboutDialog {
                             .child(div().pt(px(20.)).child(ui::filled_button(&t, "about-website", t.accent).child(i18n::t!("app.about.website", site = WEBSITE_HOST)).on_click(|_, _, cx| cx.open_url(crate::DEVELOPER_URL))))
                             .child(div().pt(px(12.)).flex().items_center().gap(px(14.)).child(link(&t, "about-source", i18n::t!("app.about.source"))).child(crate::star::about_button(&t, cx)))
                             .child(div().pt(px(6.)).text_size(px(12.)).text_color(t.ink_muted).child(i18n::t!("app.star.ask")))
+                            .child(crate::vcity::about_block(&t))
                             .children(other_apps(&t, &self.other_apps))
                             .child(div().pt(px(14.)).text_size(px(11.)).text_color(t.ink_muted).child(i18n::t!("app.about.license"))),
                     )

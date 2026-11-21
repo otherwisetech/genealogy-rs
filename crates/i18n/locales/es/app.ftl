@@ -235,3 +235,35 @@ app.toast.registry_off = Activa las entidades compartidas en Otherwise Apps (Ent
 app.toast.sharing_on = Las personas del árbol abierto se comparten con tus otras apps de Otherwise al abrirlo o guardarlo.
 app.toast.vigia_failed = No se pudo abrir Vigía.
 app.toast.vigia_save_first = Guarda el árbol primero y luego sigue documentos en Vigía.
+
+# file location, recent trees, cloud safety
+app.menu.file = Archivo
+app.menu.help = Ayuda
+app.menu.open = Abrir…
+app.menu.save = Guardar
+app.menu.save_as = Guardar como…
+app.file.move_to = Mover a…
+app.file.reveal_macos = Mostrar en Finder
+app.file.reveal_windows = Mostrar en el Explorador
+app.file.reveal_linux = Mostrar en el gestor de archivos
+app.file.recent = Árboles recientes
+app.file.recent_item = {name} — {dir}
+app.file.recent_missing = {name} — {dir} (no encontrado)
+app.file.locked_elsewhere = Este árbol está abierto en {host}. Aquí queda en solo lectura para que los dos computadores no se sobrescriban.
+app.file.open_here = Este árbol ya está abierto en otra ventana de genealogy-rs. Aquí queda en solo lectura.
+app.file.taken_over = {host} tomó el control de este árbol. Los cambios de aquí no se guardarán en él; usa Guardar como… para conservarlos.
+app.file.conflicts.one = Tu servicio de sincronización dejó {n} copia en conflicto de este árbol junto a él.
+app.file.conflicts.other = Tu servicio de sincronización dejó {n} copias en conflicto de este árbol junto a él.
+app.file.missing = {name} ya no está en {dir}.
+app.file.locate = Buscar…
+app.file.forget = Quitar de la lista
+app.file.use_here = Usar aquí de todos modos
+app.toast.save_first = Guarda primero el árbol.
+app.toast.read_only = El árbol está abierto en otro lugar: guarda una copia con Guardar como…
+app.toast.move_exists = Ya hay un archivo llamado {arg} allí.
+app.toast.moved = Movido a {arg}
+app.toast.move_failed = No se pudo mover el árbol (sigue en su sitio): {arg}
+
+# Vcity
+app.vcity.menu = Crea tu tienda en Vcity
+app.vcity.pitch = ¿Vendes productos o servicios? Crea la tienda virtual de tu empresa en Vcity: catálogo, pedidos, pagos, reservas, chat con clientes y mucho más.

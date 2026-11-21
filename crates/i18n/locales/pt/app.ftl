@@ -234,3 +234,35 @@ app.toast.registry_off = Ative as entidades compartilhadas no Otherwise Apps (En
 app.toast.sharing_on = As pessoas da árvore aberta são compartilhadas com seus outros apps da Otherwise ao abri-la ou salvá-la.
 app.toast.vigia_failed = Não foi possível abrir o Vigía.
 app.toast.vigia_save_first = Salve a árvore primeiro e depois acompanhe documentos no Vigía.
+
+# file location, recent trees, cloud safety
+app.menu.file = Arquivo
+app.menu.help = Ajuda
+app.menu.open = Abrir…
+app.menu.save = Salvar
+app.menu.save_as = Salvar como…
+app.file.move_to = Mover para…
+app.file.reveal_macos = Mostrar no Finder
+app.file.reveal_windows = Mostrar no Explorador
+app.file.reveal_linux = Mostrar no gerenciador de arquivos
+app.file.recent = Árvores recentes
+app.file.recent_item = {name} — {dir}
+app.file.recent_missing = {name} — {dir} (não encontrado)
+app.file.locked_elsewhere = Esta árvore está aberta em {host}. Aqui ela fica somente leitura para que os dois computadores não se sobrescrevam.
+app.file.open_here = Esta árvore já está aberta em outra janela do genealogy-rs. Aqui ela fica somente leitura.
+app.file.taken_over = {host} assumiu esta árvore. As alterações feitas aqui não serão salvas nela; use Salvar como… para mantê-las.
+app.file.conflicts.one = Seu serviço de sincronização deixou {n} cópia em conflito desta árvore ao lado dela.
+app.file.conflicts.other = Seu serviço de sincronização deixou {n} cópias em conflito desta árvore ao lado dela.
+app.file.missing = {name} não está mais em {dir}.
+app.file.locate = Localizar…
+app.file.forget = Remover da lista
+app.file.use_here = Usar aqui mesmo assim
+app.toast.save_first = Salve a árvore primeiro.
+app.toast.read_only = A árvore está aberta em outro lugar: salve uma cópia com Salvar como…
+app.toast.move_exists = Já existe um arquivo chamado {arg} ali.
+app.toast.moved = Movido para {arg}
+app.toast.move_failed = Não foi possível mover a árvore (ela continua no lugar antigo): {arg}
+
+# Vcity
+app.vcity.menu = Crie sua loja na Vcity
+app.vcity.pitch = Vende produtos ou serviços? Crie a loja virtual da sua empresa na Vcity: catálogo, pedidos, pagamentos, reservas, chat com clientes e muito mais.
