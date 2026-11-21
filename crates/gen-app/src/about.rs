@@ -38,18 +38,59 @@ fn footer_text() -> String {
 
 pub struct AboutDialog {
     focus: FocusHandle,
+    /// Other Otherwise apps installed here (found in the background).
+    other_apps: Vec<(otherwise_link::apps::AppSpec, otherwise_link::apps::Installed)>,
 }
 
 impl EventEmitter<AboutEvent> for AboutDialog {}
 
 impl AboutDialog {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        AboutDialog { focus: cx.focus_handle() }
+        let task = cx.background_executor().spawn(async { crate::otherwise::other_apps(&otherwise_link::apps::Locations::system()) });
+        cx.spawn(async move |this, cx| {
+            let found = task.await;
+            this.update(cx, |this, cx| {
+                this.other_apps = found;
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+        AboutDialog { focus: cx.focus_handle(), other_apps: Vec::new() }
     }
 
     pub fn focus(&self, window: &mut Window, cx: &mut App) {
         self.focus.focus(window, cx);
     }
+}
+
+/// "More Otherwise apps": the ones installed here, each opening on click.
+fn other_apps(t: &Tokens, apps: &[(otherwise_link::apps::AppSpec, otherwise_link::apps::Installed)]) -> Option<Div> {
+    if apps.is_empty() {
+        return None;
+    }
+    let rows = apps.iter().enumerate().map(|(i, (spec, installed))| {
+        let installed = installed.clone();
+        let hover = t.canvas;
+        div()
+            .id(("about-app", i))
+            .flex()
+            .items_center()
+            .justify_between()
+            .gap(px(10.))
+            .px(px(10.))
+            .py(px(5.))
+            .rounded(px(8.))
+            .cursor_pointer()
+            .hover(move |s| s.bg(hover))
+            .child(div().text_size(px(13.)).text_color(t.ink).child(spec.name.clone()))
+            .child(div().text_size(px(11.)).text_color(t.ink_muted).child(installed.version.clone().unwrap_or_default()))
+            .on_click(move |_, _, _| {
+                let app = installed.clone();
+                std::thread::spawn(move || crate::otherwise::launch(&app));
+            })
+    });
+    Some(div().w_full().pt(px(14.)).flex().flex_col().gap(px(2.)).text_left().child(div().px(px(10.)).pb(px(2.)).text_size(px(11.)).font_weight(FontWeight::SEMIBOLD).text_color(t.ink_muted).child(i18n::t!("app.about.more_apps"))).children(rows))
 }
 
 fn link(t: &Tokens, id: &'static str, label: String) -> Stateful<Div> {
@@ -107,6 +148,7 @@ impl Render for AboutDialog {
                             .child(div().pt(px(20.)).child(ui::filled_button(&t, "about-website", t.accent).child(i18n::t!("app.about.website", site = WEBSITE_HOST)).on_click(|_, _, cx| cx.open_url(crate::DEVELOPER_URL))))
                             .child(div().pt(px(12.)).flex().items_center().gap(px(14.)).child(link(&t, "about-source", i18n::t!("app.about.source"))).child(crate::star::about_button(&t, cx)))
                             .child(div().pt(px(6.)).text_size(px(12.)).text_color(t.ink_muted).child(i18n::t!("app.star.ask")))
+                            .children(other_apps(&t, &self.other_apps))
                             .child(div().pt(px(14.)).text_size(px(11.)).text_color(t.ink_muted).child(i18n::t!("app.about.license"))),
                     )
                     // after the body so it paints, and takes clicks, on top

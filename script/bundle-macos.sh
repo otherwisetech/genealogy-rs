@@ -63,6 +63,15 @@ cat > "$app/Contents/Info.plist" <<PLIST
       <key>LSItemContentTypes</key><array><string>org.gedcom.ged</string></array>
     </dict>
   </array>
+  <!-- otherwise-genealogy:// links (otherwise-link: register::macos_url_types) -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key><string>io.github.otherwisetech.genealogy-rs</string>
+      <key>CFBundleTypeRole</key><string>Viewer</string>
+      <key>CFBundleURLSchemes</key><array><string>otherwise-genealogy</string></array>
+    </dict>
+  </array>
 </dict>
 </plist>
 PLIST

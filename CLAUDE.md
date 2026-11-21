@@ -7,7 +7,9 @@ Read `docs/DESIGN.md` before touching UI.
 ```
 crates/i18n     gen-i18n: embedded translation catalogs, t!/tn!/tv! macros, locale switching, i18n guard tests
 crates/gedcom   gen-gedcom: lossless GEDCOM parser/writer, tree model, edits, search — no UI
-crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component)
+crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component); otherwise.rs: otherwise-link
+                logic (links, entity cards, registry push, Today events; tested), shared.rs: the
+                window's side of it (link pump, publish after load/save, Vigía action)
 ```
 
 ## Rules
@@ -34,6 +36,10 @@ crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component)
   translating every file (incl. `common.language_name`); no code changes.
 - Never commit real family trees (`*.ged` is ignored outside test fixtures) or real people's names.
 - Every core change ships with a test. GEDCOM output must stay lossless (unknown tags preserved).
+- Shared entity cards carry names and exact birth / death dates only — never notes, places or
+  sources. Pushing is opt-in (`share_people`, plus the registry's own opt-in), incremental
+  (`otherwise-sync.json`), and never deletes or merges in the registry. otherwise-link is pinned
+  by git tag and must only add its own crates to Cargo.lock; tests use temp dirs (`Root::at`).
 - Comments: sparse, only non-obvious why.
 - Disk-heavy GPUI build: `cargo build -p gen-app` (dev profile has no debuginfo on purpose).
 

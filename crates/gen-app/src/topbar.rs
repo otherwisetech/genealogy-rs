@@ -48,6 +48,7 @@ impl GenApp {
         let current = i18n::locale();
         let weak = cx.entity().downgrade();
         let update_check = self.update_check;
+        let (share_people, today_on) = (self.share_people, self.today_on);
         let lang = Button::new("lang").ghost().icon(IconName::Globe).with_size(size::CONTROL_H).tooltip(i18n::t!("app.topbar.preferences")).dropdown_menu_with_anchor(Anchor::TopRight, move |mut menu, _, _| {
             menu = menu.label(i18n::t!("common.language"));
             for (code, name) in i18n::available() {
@@ -63,6 +64,20 @@ impl GenApp {
                     w.update(cx, |this, cx| this.set_update_check(!update_check, cx)).ok();
                 }))
                 .label(i18n::t!("app.update.setting_hint"))
+                .separator()
+                .item(PopupMenuItem::new(i18n::t!("app.shared.share_people")).checked(share_people).on_click({
+                    let w = weak.clone();
+                    move |_, _, cx| {
+                        w.update(cx, |this, cx| this.set_share_people(!share_people, cx)).ok();
+                    }
+                }))
+                .label(i18n::t!("app.shared.share_people_hint"))
+                .item(PopupMenuItem::new(i18n::t!("app.shared.today")).checked(today_on).on_click({
+                    let w = weak.clone();
+                    move |_, _, cx| {
+                        w.update(cx, |this, cx| this.set_today(!today_on, cx)).ok();
+                    }
+                }))
                 .separator()
                 .item(PopupMenuItem::new(crate::about::menu_label()).on_click(move |_, window, cx| {
                     about.update(cx, |this, cx| this.open_about(window, cx)).ok();
