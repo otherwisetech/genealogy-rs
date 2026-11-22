@@ -224,7 +224,7 @@ app.update.setting_hint = Consulta GitHub (api.github.com) una vez al día por n
 app.about.more_apps = Más apps de Otherwise en este computador
 app.shared.share_people = Compartir personas con otras apps de Otherwise
 app.shared.share_people_hint = Los nombres y las fechas exactas de nacimiento y defunción van al registro compartido de entidades de este computador (actívalo en Otherwise Apps). Las notas, los lugares y las fuentes nunca salen del archivo.
-app.shared.today = Cumpleaños y aniversarios en Hoy de Otherwise Apps
+app.shared.today = Cumpleaños y aniversarios en Hoy y en el Calendario de Otherwise Apps
 app.sheet.track_vigia = Seguir un documento en Vigía…
 app.today.birthday = {name} cumple {age}
 app.today.anniversary.one = {a} y {b}: {n} año de casados
@@ -267,3 +267,5 @@ app.toast.move_failed = No se pudo mover el árbol (sigue en su sitio): {arg}
 # Vcity
 app.vcity.menu = Crea tu tienda en Vcity
 app.vcity.pitch = ¿Vendes productos o servicios? Crea la tienda virtual de tu empresa en Vcity: catálogo, pedidos, pagos, reservas, chat con clientes y mucho más.
+app.cal.birthday = Cumpleaños de {name}
+app.cal.anniversary = Aniversario de {a} y {b}

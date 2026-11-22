@@ -224,7 +224,7 @@ app.update.setting_hint = Asks GitHub (api.github.com) once a day for new releas
 app.about.more_apps = More Otherwise apps on this computer
 app.shared.share_people = Share people with other Otherwise apps
 app.shared.share_people_hint = Names and exact birth and death dates go to the shared entity registry on this computer (turn it on in Otherwise Apps). Notes, places and sources never leave the file.
-app.shared.today = Birthdays and anniversaries in Otherwise Apps’ Today
+app.shared.today = Birthdays and anniversaries in Otherwise Apps’ Today and Calendar
 app.sheet.track_vigia = Track a document in Vigía…
 app.today.birthday = {name} turns {age}
 app.today.anniversary.one = {a} and {b}: {n} year married
@@ -267,3 +267,5 @@ app.toast.move_failed = Could not move the tree (it is still in its old place): 
 # Vcity
 app.vcity.menu = Create your store on Vcity
 app.vcity.pitch = Sell products or services? Create your business’s online store on Vcity — catalog, orders, payments, bookings, customer chat and more.
+app.cal.birthday = {name}’s birthday
+app.cal.anniversary = {a} and {b}’s anniversary
