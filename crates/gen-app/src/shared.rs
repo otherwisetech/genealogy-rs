@@ -134,6 +134,11 @@ impl GenApp {
                     }
                 }
                 let _ = match (today_on, path.as_deref()) {
+                    (true, Some(p)) => otherwise_link::events::publish(&root, otherwise::APP_ID, &otherwise::calendar(&tree, Some(p), &otherwise::tree_key(p), chrono::Local::now().date_naive(), &state), None),
+                    (true, None) => Ok(()),
+                    (false, _) => otherwise_link::events::clear(&root, otherwise::APP_ID),
+                };
+                let _ = match (today_on, path.as_deref()) {
                     (true, Some(p)) => today::publish(&root, otherwise::APP_ID, &otherwise::upcoming(&tree, Some(p), &otherwise::tree_key(p), chrono::Local::now().date_naive(), &state)),
                     (true, None) => Ok(()),
                     (false, _) => today::clear(&root, otherwise::APP_ID),

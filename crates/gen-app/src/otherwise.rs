@@ -331,6 +331,40 @@ pub fn upcoming(tree: &Tree, file: Option<&Path>, key: &str, today: NaiveDate, s
     out
 }
 
+/// The same people for Otherwise Apps' Calendar (`<data root>/genealogy/events.json`): one
+/// yearly event per living person's exact birthday and per living couple's wedding day. Names
+/// only, never notes, places or sources. 29 Feb birthdays fall on the last day of February.
+pub fn calendar(tree: &Tree, file: Option<&Path>, key: &str, today: NaiveDate, state: &SyncState) -> Vec<otherwise_link::events::Event> {
+    use otherwise_link::events::{Event as Cal, Kind as CalKind};
+    let yearly = |m: u32, d: u32| if m == 2 && d == 29 { "FREQ=YEARLY;BYMONTH=2;BYMONTHDAY=-1".to_string() } else { "FREQ=YEARLY".to_string() }; // i18n-ok: RRULE
+    let mut out = Vec::new();
+    for id in &tree.order {
+        let Some(p) = tree.person(id) else { continue };
+        let Some((y, m, d)) = full_date(p.birth.as_ref()) else { continue };
+        let Some(born) = NaiveDate::from_ymd_opt(y, m, d) else { continue };
+        if !alive(p) || today.year() - y > MAX_AGE || born > today {
+            continue;
+        }
+        let mut e = Cal::day(format!("birthday-{key}-{}", id.trim_matches('@')), CalKind::Birthday, i18n::t!("app.cal.birthday", name = p.name()), born).rrule(yearly(m, d)).link(&person_link(file, id)); // i18n-ok: event id
+        if let Some(u) = state.entity(&person_ref(tree, key, p)) {
+            e = e.entity(u);
+        }
+        out.push(e);
+    }
+    let mut fams: Vec<_> = tree.families.values().collect();
+    fams.sort_by(|a, b| a.id.cmp(&b.id));
+    for f in fams {
+        let (Some(a), Some(b)) = (f.husband.as_deref().and_then(|i| tree.person(i)), f.wife.as_deref().and_then(|i| tree.person(i))) else { continue };
+        if !alive(a) || !alive(b) || f.events.iter().any(|e| e.tag == "DIV" || e.tag == "ANUL") {
+            continue;
+        }
+        let Some((y, m, d)) = full_date(f.events.iter().find(|e| e.tag == "MARR")) else { continue };
+        let Some(wed) = NaiveDate::from_ymd_opt(y, m, d).filter(|w| *w <= today) else { continue };
+        out.push(Cal::day(format!("anniversary-{key}-{}", f.id.trim_matches('@')), CalKind::Anniversary, i18n::t!("app.cal.anniversary", a = a.name(), b = b.name()), wed).rrule(yearly(m, d)).link(&person_link(file, &a.id))); // i18n-ok: event id
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -451,6 +485,25 @@ mod tests {
         let next = upcoming(&t, None, "k", day("2027-11-20"), &state);
         assert!(next.iter().any(|e| e.id == "birthday-k-I1-2027"));
         assert!(upcoming(&t, None, "k", day("2026-06-01"), &state).is_empty());
+    }
+
+    #[test]
+    fn calendar_has_yearly_birthdays_and_anniversaries() {
+        let t = tree();
+        let today = day("2026-11-20");
+        let ev = calendar(&t, Some(Path::new("/x/familia.ged")), "k", today, &SyncState::default());
+        let ids: Vec<&str> = ev.iter().map(|e| e.id.as_str()).collect();
+        assert_eq!(ids, ["birthday-k-I1", "birthday-k-I4", "anniversary-k-F1"], "Rosa died, Luis has no exact date");
+        assert!(ev.iter().all(|e| e.rrule.as_deref() == Some("FREQ=YEARLY") && e.body.is_none() && e.location.is_none()));
+        let dir = tempfile::tempdir().unwrap();
+        let root = Root::at(dir.path());
+        otherwise_link::events::publish(&root, APP_ID, &ev, None).unwrap();
+        let m = otherwise_link::events::read_in(&root, day("2026-11-01"), day("2026-12-31"), &chrono::Utc);
+        let got: Vec<String> = m.occurrences.iter().map(|o| o.first_day.to_string()).collect();
+        assert_eq!(got, ["2026-11-25", "2026-11-30", "2026-12-01"]);
+        assert!(m.occurrences[0].event.link.as_deref().unwrap().starts_with("otherwise://genealogy/person?"));
+        let raw = std::fs::read_to_string(dir.path().join("genealogy/events.json")).unwrap();
+        assert!(!raw.contains("Cali") && !raw.contains("secreto"));
     }
 
     #[test]

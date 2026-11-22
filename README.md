@@ -80,6 +80,9 @@ the globe (preferences) menu.
   opened or saved, only those that changed; nothing is ever deleted from the registry. A person's
   id there comes from the record's `_UID` / `UID` when it has one, else from the file's path and
   the record's xref.
+- **Calendar** (same switch as Today): the same people as yearly events in
+  `<data folder>/genealogy/events.json` for Otherwise Apps' Calendar (otherwise-link SPEC §9):
+  names and dates only, each opening the person (`otherwise://genealogy/person?file=…&id=…`).
 - **Today** (on by default): birthdays of living people and wedding anniversaries of living couples
   in the next 14 days, from exact dates, appear in Otherwise Apps' *Today* view and open the
   person here. The feed is `today/genealogy.json` in the shared Otherwise folder.
