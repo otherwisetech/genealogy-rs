@@ -147,6 +147,7 @@ impl GenApp {
                     .child(ui::icon_button(&t, "undo", IconName::Undo, can_undo).tooltip(|w, cx| gpui_component::tooltip::Tooltip::new(i18n::t!("app.topbar.undo")).build(w, cx)).on_click(cx.listener(|this, _, window, cx| this.undo(false, window, cx))))
                     .child(ui::icon_button(&t, "redo", IconName::Redo, can_redo).tooltip(|w, cx| gpui_component::tooltip::Tooltip::new(i18n::t!("app.topbar.redo")).build(w, cx)).on_click(cx.listener(|this, _, window, cx| this.undo(true, window, cx)))),
             )
+            .child(ui::icon_button(&t, "assistant", IconName::Bot, true).tooltip(|w, cx| gpui_component::tooltip::Tooltip::new(i18n::t!("app.agent.toggle")).build(w, cx)).on_click(cx.listener(|this, _, window, cx| this.toggle_agent_panel(window, cx))))
             .child(ui::icon_button(&t, "open", IconName::FolderOpen, true).tooltip(|w, cx| gpui_component::tooltip::Tooltip::new(i18n::t!("app.topbar.open")).build(w, cx)).on_click(cx.listener(|this, _, window, cx| this.open_dialog(window, cx))))
             .child(file_menu)
             .child(

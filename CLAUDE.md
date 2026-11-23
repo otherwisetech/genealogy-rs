@@ -7,6 +7,8 @@ Read `docs/DESIGN.md` before touching UI.
 ```
 crates/i18n     gen-i18n: embedded translation catalogs, t!/tn!/tv! macros, locale switching, i18n guard tests
 crates/gedcom   gen-gedcom: lossless GEDCOM parser/writer, tree model, edits, search — no UI
+crates/mcp      gen-mcp: `genealogy-rs mcp` — stdio MCP server over one tree file (read tools; with
+                `--propose <dir>` also propose_* tools that only drop proposals in that folder)
 crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component); otherwise.rs: otherwise-link
                 logic (links, entity cards, registry push, Today events; tested), shared.rs: the
                 window's side of it (link pump, publish after load/save, Vigía action);
@@ -47,12 +49,21 @@ crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component); otherwise.rs
 - The app's own files go through `storage::app_dir()`; never write next to a tree except its
   `.lock.json` (released on close). Moves use otherwise-link's verified `storage::move_any`,
   never a plain copy + delete. Migration never overwrites a file at the new place.
+- **The assistant is the shared AI panel** (`otherwise-agent-panel`, `gen-app/src/agent.rs`,
+  ⌘J): the user's Claude Code / Codex / opencode with `genealogy-rs mcp --tree <snapshot>` for
+  that session only (never write the user's agent configs). The server **never writes the
+  tree**: it reads the window's snapshot (`<app dir>/assistant/live/<pid>/tree.ged`, rewritten
+  when `rev` changes, removed on quit) and, outside "Solo lectura", `propose_*` tools validate a
+  `genmcp::proposal::Proposal` and drop it in `…/proposals/`; the window polls that folder and
+  shows cards; Aplicar is one `GenApp::edit` (⌘Z). New tools go in `gen-mcp` with a test on
+  synthetic fixtures. The privacy note (`app.agent.privacy_*`) must keep saying that family
+  data the assistant reads goes to the chosen provider with the user's account.
 - Comments: sparse, only non-obvious why.
 - Disk-heavy GPUI build: `cargo build -p gen-app` (dev profile has no debuginfo on purpose).
 
 ## Validate
 
 ```
-cargo test -p gen-i18n -p gen-gedcom -p gen-app
+cargo test -p gen-i18n -p gen-gedcom -p gen-mcp -p gen-app
 cargo clippy --workspace --all-targets
 ```
