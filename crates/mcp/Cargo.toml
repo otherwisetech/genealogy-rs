@@ -1,0 +1,20 @@
+[package]
+name = "gen-mcp"
+description = "Read-only MCP server over a GEDCOM family tree, with edits as proposals the app's user accepts"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "genmcp"
+
+[dependencies]
+gedcom.workspace = true
+i18n.workspace = true
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[dev-dependencies]
+tempfile = "3"

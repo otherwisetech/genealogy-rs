@@ -1,10 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["crates/i18n", "crates/gedcom", "crates/gen-app"]
-default-members = ["crates/i18n", "crates/gedcom"]
+members = ["crates/i18n", "crates/gedcom", "crates/mcp", "crates/gen-app"]
+default-members = ["crates/i18n", "crates/gedcom", "crates/mcp"]
 
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
@@ -13,6 +13,7 @@ repository = "https://github.com/otherwisetech/genealogy-rs"
 [workspace.dependencies]
 gedcom = { path = "crates/gedcom", package = "gen-gedcom" }
 i18n = { path = "crates/i18n", package = "gen-i18n" }
+genmcp = { path = "crates/mcp", package = "gen-mcp" }
 anyhow = "1"
 thiserror = "2"
 # deep links, app discovery, the shared entity registry and the Today feed of Otherwise apps

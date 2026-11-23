@@ -194,6 +194,8 @@ pub struct GenApp {
     /// open elsewhere: Save goes to Save As
     pub(crate) read_only: bool,
     pub(crate) file_notice: Option<crate::files::FileNotice>,
+    /// the AI panel's cards and the tree snapshot its sessions read
+    pub(crate) agent: crate::agent::AgentState,
     _subs: Vec<Subscription>,
 }
 
@@ -258,10 +260,16 @@ impl GenApp {
             lock: None,
             read_only: false,
             file_notice: None,
+            agent: crate::agent::AgentState::new(),
             _subs: subs,
         };
         this.start_shared(window, cx);
         this.start_lock_heartbeat(cx);
+        this.start_agent_pump(cx);
+        this._subs.push(cx.on_app_quit(|this, _| {
+            this.remove_agent_files();
+            async {}
+        }));
         if let Some(p) = initial {
             this.load(p, window, cx);
         }
@@ -368,7 +376,7 @@ impl GenApp {
         self.show_toast(key, arg.into(), false, cx);
     }
 
-    fn show_toast(&mut self, key: &'static str, arg: String, undo: bool, cx: &mut Context<Self>) {
+    pub(crate) fn show_toast(&mut self, key: &'static str, arg: String, undo: bool, cx: &mut Context<Self>) {
         self.put_toast(Toast { key, arg, at: Instant::now(), undo, report: None, lasts: TOAST_FOR }, cx);
     }
 
@@ -1171,6 +1179,7 @@ impl GenApp {
             s.language = Some(code.to_string());
             s.save();
             gpui_component::set_locale(code);
+            crate::agent::apply_labels();
             crate::set_app_menus(cx);
             self.rev += 1;
             self.update_title(window);
@@ -1216,6 +1225,7 @@ impl Render for GenApp {
         self.tick(window);
         self.ensure_quality(cx);
         let t = tokens(cx);
+        self.sync_agent(&t, cx);
         let main = match self.tab {
             Tab::Pedigree | Tab::Descendants => self.render_canvas(window, cx).into_any_element(),
             Tab::List => self.render_list(cx).into_any_element(),

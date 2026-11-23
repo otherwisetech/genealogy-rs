@@ -2,6 +2,7 @@
 #![cfg_attr(all(target_os = "windows", not(debug_assertions)), windows_subsystem = "windows")]
 
 mod about;
+mod agent;
 mod app;
 mod edit_dialog;
 mod fan;
@@ -108,6 +109,11 @@ const FONTS: [&[u8]; 4] = [
 ];
 
 fn main() {
+    // the AI panel starts this binary as the tree's MCP server: no window, no migration
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(code) = agent::run_mcp(&args) {
+        std::process::exit(code);
+    }
     storage::migrate_on_startup();
     i18n::set_locale(settings::initial_language(&settings::Settings::load()));
     let initial: Option<PathBuf> = open_files::path_from_args(std::env::args().skip(1));
@@ -140,6 +146,8 @@ fn main() {
         #[cfg(target_os = "macos")]
         set_dock_icon();
         gpui_component::init(cx);
+        otherwise_agent_panel::ui::init(cx);
+        agent::apply_labels();
         app::sync_theme(None, cx);
         app::bind_keys(cx);
         edit_dialog::bind_keys(cx);
@@ -164,7 +172,12 @@ fn main() {
         cx.spawn(async move |cx| {
             cx.open_window(window_options, |window, cx| {
                 let v = cx.new(|cx| app::GenApp::new(initial, window, cx));
-                cx.new(|cx| Root::new(v, window, cx))
+                let focus = v.read(cx).canvas_focus.clone();
+                let host: std::rc::Rc<dyn otherwise_agent_panel::ui::AgentHost> = std::rc::Rc::new(agent::Host { app: v.downgrade() });
+                let dock = cx.new(|cx| otherwise_agent_panel::ui::AgentDock::new(v.clone(), Some(focus), host, window, cx));
+                let panel = dock.read(cx).panel().downgrade();
+                v.update(cx, |v, _| v.agent.panel = Some(panel));
+                cx.new(|cx| Root::new(dock, window, cx))
             })
             .expect("open window");
         })

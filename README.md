@@ -66,6 +66,31 @@ The same switch covers the star count next to *Star on GitHub* (footer and About
 app reads `api.github.com/repos/otherwisetech/genealogy-rs` (no login, no user data) and caches the
 number; if that fails the count is simply not shown. Starring itself happens on github.com.
 
+## AI assistant (⌘J)
+
+The **Asistente** button (or ⌘J) docks the shared Otherwise AI panel
+([otherwise-agent-panel](https://github.com/otherwisetech/otherwise-agent-panel)) next to the
+tree, as a bar, at the bottom, on the right or full window, in Chat or Terminal mode. It runs
+**your own** Claude Code, Codex or opencode (whichever is installed) and gives it the open tree
+for that session only, through a small read-only MCP server (`genealogy-rs mcp`); your agent's
+configuration files are never changed. Try *¿Quiénes son los bisabuelos de …?*, *Escribe una
+pequeña biografía de …*, *¿Qué personas parecen duplicadas?* or *¿Qué datos faltan?*.
+
+- **What it can read**: search people, a person with relatives and events, ancestors and
+  descendants by generation, how two people are related, possible duplicates, missing data
+  (dates, places, parents, sources) and likely errors. It reads the tree as it is in the window,
+  unsaved edits included (a snapshot in `<data folder>/genealogy/assistant/live/`, removed when
+  the app quits).
+- **Changes are cards**: in *Preguntar antes de cambiar* or *Automático* the assistant may
+  propose adding a person or a relationship, fixing a date, place or name, or merging duplicates.
+  Each appears as a card; nothing changes until you press *Aplicar*, and ⌘Z undoes it.
+  *Solo lectura* offers no proposals at all.
+- **Privacy**: family data is personal. What you ask, what you attach and whatever the assistant
+  reads from the tree (names, dates, places, notes) goes to the provider you picked (Anthropic,
+  OpenAI, opencode's provider) with your own account; the panel says so under the input. Nothing
+  else leaves the computer, and the agent's own shell, file and web tools are off.
+- Conversations are kept in `<data folder>/genealogy/assistant/`.
+
 ## Works with other Otherwise apps
 
 genealogy-rs uses [otherwise-link](https://github.com/otherwisetech/otherwise-link), the small
@@ -150,12 +175,14 @@ The first build compiles GPUI from git and takes a while.
 | drag, wheel / ⌘+wheel, pinch | pan / zoom (25–200 %) |
 | ⌘= / ⌘− / ⌘0 / ⌘9 | zoom in / out / 100 % / fit |
 | ⌘Z / ⌘⇧Z | undo / redo (outside text fields) |
+| ⌘J | show / hide the AI assistant |
 
 ## Layout
 
 ```
 crates/i18n      translation catalogs (gen-i18n), embedded at build time
 crates/gedcom    library (gen-gedcom): lossless parser/writer, family-tree model, edits, search — no UI
+crates/mcp       gen-mcp: the read-only MCP server the AI panel starts (`genealogy-rs mcp`) and its proposals
 crates/gen-app   the `genealogy-rs` desktop binary (GPUI)
 ```
 
