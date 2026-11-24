@@ -71,8 +71,8 @@ number; if that fails the count is simply not shown. Starring itself happens on 
 The **Asistente** button (or ⌘J) docks the shared Otherwise AI panel
 ([otherwise-agent-panel](https://github.com/otherwisetech/otherwise-agent-panel)) next to the
 tree, as a bar, at the bottom, on the right or full window, in Chat or Terminal mode. It runs
-**your own** Claude Code, Codex or opencode (whichever is installed) and gives it the open tree
-for that session only, through a small read-only MCP server (`genealogy-rs mcp`); your agent's
+**your own** Claude Code, Codex or opencode (whichever is installed), or a model of your own
+**Ollama** that runs on this computer, and gives it the open tree for that session only, through a small read-only MCP server (`genealogy-rs mcp`); your agent's
 configuration files are never changed. Try *¿Qué nombres se repiten más?*, *¿De dónde viene la
 familia?*, *¿Cómo están emparentados … y …?* or *¿Qué datos están mal o faltan?*.
 
@@ -93,8 +93,8 @@ familia?*, *¿Cómo están emparentados … y …?* or *¿Qué datos están mal 
   *Solo lectura* offers no proposals at all.
 - **Privacy**: family data is personal. What you ask, what you attach and whatever the assistant
   reads from the tree (names, dates, places, notes) goes to the provider you picked (Anthropic,
-  OpenAI, opencode's provider) with your own account; the panel says so under the input. Nothing
-  else leaves the computer, and the agent's own shell, file and web tools are off.
+  OpenAI, opencode's provider) with your own account; the panel says so under the input. With
+  Ollama everything stays on this computer. Nothing else leaves the computer, and the agent's own shell, file and web tools are off.
 - Conversations are kept in `<data folder>/genealogy/assistant/`.
 
 ## Works with other Otherwise apps
