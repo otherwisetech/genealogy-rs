@@ -33,7 +33,7 @@ fn read_only_sessions_offer_no_proposals() {
     let d = tempfile::tempdir().unwrap();
     let names = |s: &Server| s.tools().iter().map(|t| t["name"].as_str().unwrap().to_string()).collect::<Vec<_>>();
     let ro = names(&server(d.path(), false));
-    assert!(ro.contains(&"ancestors".to_string()) && ro.contains(&"data_gaps".to_string()));
+    assert!(ro.contains(&"ancestors".to_string()) && ro.contains(&"data_quality".to_string()));
     assert!(!ro.iter().any(|n| n.starts_with("propose_")));
     let mut s = server(d.path(), false);
     let r = s.handle(&json!({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "propose_merge", "arguments": {"keep": "I10", "duplicate": "I30"}}})).unwrap();
@@ -70,7 +70,7 @@ fn search_and_person_with_relatives() {
     assert_eq!(rosa["unions"][0]["partner"]["id"], json!("I13"));
     assert_eq!(ids(&rosa["unions"][0]["children"]).len(), 2);
     assert!(rosa["relationship_to_person_on_screen"].as_str().is_some(), "Rosa is Simón's mother");
-    let summary = call(&mut s, "tree_summary", json!({}));
+    let summary = call(&mut s, "tree_stats", json!({}));
     assert_eq!(summary["people"], json!(11));
     assert_eq!(summary["on_screen"]["id"], json!("I20"));
 }
@@ -102,13 +102,13 @@ fn relationship_gaps_and_consistency() {
     let r = call(&mut s, "relationship", json!({"a": "I20", "b": "I30"}));
     assert_eq!(r["related"], json!(true));
     assert_eq!(r["generations_up"], json!(3));
-    let gaps = call(&mut s, "data_gaps", json!({}));
-    assert!(gaps["people_with_gaps"].as_u64().unwrap() > 0);
+    let gaps = call(&mut s, "data_quality", json!({"check": "missing"}));
+    assert!(gaps["total"].as_u64().unwrap() > 0);
     assert!(gaps["people_missing"]["sources"].as_u64().is_some());
-    let only = call(&mut s, "data_gaps", json!({"missing": "parents"}));
+    let only = call(&mut s, "data_quality", json!({"check": "missing", "missing": "parents"}));
     assert!(only["people"].as_array().unwrap().iter().all(|p| p["missing"].as_array().unwrap().contains(&json!("parents"))));
     assert!(ids(&only["people"]).contains(&"I30".to_string()));
-    let c = call(&mut s, "check_consistency", json!({}));
+    let c = call(&mut s, "data_quality", json!({"check": "structure"}));
     assert!(c["issues"].as_array().unwrap().iter().all(|i| i["message"].as_str().is_some_and(|m| !m.is_empty())));
 }
 
@@ -120,12 +120,12 @@ fn finds_a_person_entered_twice() {
     let dup = t.add_person("Tomas", "Ordonez", gedcom::Sex::Male);
     t.set_event(&dup, "BIRT", "ABT 1890", "").unwrap();
     let mut s = Server::new(tree_file(d.path(), &t.to_gedcom()), None, None);
-    let all = call(&mut s, "find_duplicates", json!({}));
+    let all = call(&mut s, "data_quality", json!({"check": "duplicates"}));
     let pair = &all["pairs"][0];
     let mut got = vec![pair["a"]["id"].as_str().unwrap(), pair["b"]["id"].as_str().unwrap()];
     got.sort();
     assert_eq!(got, ["I10", dup.as_str()]);
-    let one = call(&mut s, "find_duplicates", json!({"id": "I10"}));
+    let one = call(&mut s, "data_quality", json!({"check": "duplicates", "id": "I10"}));
     assert_eq!(one["candidates"][0]["person"]["id"], json!(dup));
 }
 
@@ -133,11 +133,11 @@ fn finds_a_person_entered_twice() {
 fn reloads_the_tree_when_the_file_changes() {
     let d = tempfile::tempdir().unwrap();
     let mut s = server(d.path(), false);
-    assert_eq!(call(&mut s, "tree_summary", json!({}))["people"], json!(11));
+    assert_eq!(call(&mut s, "tree_stats", json!({}))["people"], json!(11));
     let mut t = gedcom::Tree::parse(FAMILY).unwrap();
     t.add_person("Nueva", "Persona", gedcom::Sex::Female);
     std::fs::write(d.path().join("tree.ged"), t.to_gedcom()).unwrap();
-    assert_eq!(call(&mut s, "tree_summary", json!({}))["people"], json!(12));
+    assert_eq!(call(&mut s, "tree_stats", json!({}))["people"], json!(12));
 }
 
 #[test]

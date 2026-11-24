@@ -4,5 +4,6 @@
 *.GED
 *.ged.tmp
 !crates/gedcom/tests/fixtures/*.ged
+!crates/mcp/tests/fixtures/*.ged
 .DS_Store
 .claude/worktrees/

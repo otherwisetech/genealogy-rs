@@ -27,6 +27,13 @@ mod topbar;
 mod ui;
 mod update;
 
+/// Serializes tests that switch the global UI language.
+#[cfg(test)]
+pub(crate) fn locale_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 use gpui::*;
 use gpui_component::Root;
 use gpui_component_assets::Assets;

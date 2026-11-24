@@ -19,7 +19,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::time::Duration;
 
-const INSTRUCTIONS: &str = "This is genealogy-rs, a family-tree (GEDCOM) app. The MCP server \"genealogy\" is the tree open in the app, unsaved edits included: search_people first to get ids, then get_person, ancestors, descendants, relationship, find_duplicates, data_gaps, check_consistency. Never invent people, dates or places; say what the tree doesn't know. Changes (a new person, a relationship, a date or place, a name, merging duplicates) are only proposals when the propose_* tools are offered: each becomes a card the user accepts or rejects in the app, so tell them to review the card instead of saying it is done. Write answers in the user's language. This is personal family data: only repeat what the question needs."; // i18n-ok: agent instructions (English)
+const INSTRUCTIONS: &str = "This is genealogy-rs, a family-tree (GEDCOM) app. The MCP server \"genealogy\" is the tree open in the app, unsaved edits included. Answer with as few tool calls as possible and prefer the aggregate tools to repeated lookups: most common names → name_stats once (never search_people per guessed name); size, men / women, living, centuries, lifespans, generations → tree_stats; where the family comes from → place_stats; how two people are related → relationship; events in order → timeline; any \"who / how many …\" with conditions → find_people (typed filters, count_by); errors and missing data → data_quality. Use search_people only to get a person's id, then get_person, ancestors or descendants. Counts from these tools are exact: give them as they are. Never invent people, dates or places; say what the tree doesn't know. Changes (a new person, a relationship, a date or place, a name, merging duplicates) are only proposals when the propose_* tools are offered: each becomes a card the user accepts or rejects in the app, so tell them to review the card instead of saying it is done. Write answers in the user's language. This is personal family data: only repeat what the question needs."; // i18n-ok: agent instructions (English)
 
 const POLL: Duration = Duration::from_millis(800);
 
@@ -215,10 +215,12 @@ impl AgentHost for Host {
         // through the state the window last rendered
         let name = FOCUS_NAME.with(|n| n.borrow().clone()).unwrap_or_else(|| i18n::t!("app.agent.this_person"));
         vec![
+            i18n::t!("app.agent.suggest_names"),
+            i18n::t!("app.agent.suggest_origins"),
+            i18n::t!("app.agent.suggest_related", name = name),
+            i18n::t!("app.agent.suggest_problems"),
             i18n::t!("app.agent.suggest_great_grandparents", name = name),
             i18n::t!("app.agent.suggest_bio", name = name),
-            i18n::t!("app.agent.suggest_duplicates"),
-            i18n::t!("app.agent.suggest_gaps"),
         ]
     }
 
@@ -389,6 +391,7 @@ mod tests {
 
     #[test]
     fn cards_say_what_changes() {
+        let _l = crate::locale_lock();
         i18n::set_locale("es");
         let mut t = gedcom::Tree::parse(include_str!("../../gedcom/tests/fixtures/family.ged")).unwrap();
         t.set_event("I10", "BIRT", "1890", "Toledo").unwrap();
@@ -406,6 +409,7 @@ mod tests {
     #[test]
     fn privacy_note_names_family_data() {
         // other tests read Spanish text, so this stays in the default language
+        let _l = crate::locale_lock();
         i18n::set_locale("es");
         apply_labels();
         let note = otherwise_agent_panel::t!("panel.privacy.cli", agent = "Claude Code", vendor = "Anthropic");

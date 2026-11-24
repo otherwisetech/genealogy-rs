@@ -73,12 +73,18 @@ The **Asistente** button (or ⌘J) docks the shared Otherwise AI panel
 tree, as a bar, at the bottom, on the right or full window, in Chat or Terminal mode. It runs
 **your own** Claude Code, Codex or opencode (whichever is installed) and gives it the open tree
 for that session only, through a small read-only MCP server (`genealogy-rs mcp`); your agent's
-configuration files are never changed. Try *¿Quiénes son los bisabuelos de …?*, *Escribe una
-pequeña biografía de …*, *¿Qué personas parecen duplicadas?* or *¿Qué datos faltan?*.
+configuration files are never changed. Try *¿Qué nombres se repiten más?*, *¿De dónde viene la
+familia?*, *¿Cómo están emparentados … y …?* or *¿Qué datos están mal o faltan?*.
 
-- **What it can read**: search people, a person with relatives and events, ancestors and
-  descendants by generation, how two people are related, possible duplicates, missing data
-  (dates, places, parents, sources) and likely errors. It reads the tree as it is in the window,
+- **What it can read**: exact aggregates in one call — name frequencies (`name_stats`: given
+  names and surnames counted separately, «Ana María» counts for Ana and María, accents folded),
+  the shape of the tree (`tree_stats`: sex, living, births per century, lifespans, generations,
+  children per family, completeness), places by birth / death / marriage / residence with their
+  hierarchy (`place_stats`), how two people are related with the path (`relationship`), events
+  in order for a person or a branch (`timeline`), a typed query (`find_people`: name, sex,
+  dates, places, missing fields, descendants / ancestors of someone, counts per group) and data
+  problems (`data_quality`: duplicates, impossible dates, odd ages, gaps). Name search matches
+  whole words: *Juan* never finds *Juana*. It reads the tree as it is in the window,
   unsaved edits included (a snapshot in `<data folder>/genealogy/assistant/live/`, removed when
   the app quits).
 - **Changes are cards**: in *Preguntar antes de cambiar* or *Automático* the assistant may
