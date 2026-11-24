@@ -2159,7 +2159,7 @@ dependencies = [
 
 [[package]]
 name = "gen-app"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2183,7 +2183,7 @@ dependencies = [
 
 [[package]]
 name = "gen-gedcom"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "gen-i18n",
  "thiserror 2.0.20",
@@ -2191,11 +2191,11 @@ dependencies = [
 
 [[package]]
 name = "gen-i18n"
-version = "0.7.0"
+version = "0.8.0"
 
 [[package]]
 name = "gen-mcp"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "gen-gedcom",
  "gen-i18n",

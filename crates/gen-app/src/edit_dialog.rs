@@ -1320,6 +1320,7 @@ mod tests {
     fn subtitle_names_parents() {
         let ged = "0 HEAD\n0 @I1@ INDI\n1 NAME Ana /Ruiz/\n1 SEX F\n1 FAMC @F1@\n0 @I2@ INDI\n1 NAME Luis /Ruiz/\n1 SEX M\n1 FAMS @F1@\n0 @I3@ INDI\n1 NAME Eva /Sol/\n0 @F1@ FAM\n1 HUSB @I2@\n1 CHIL @I1@\n0 @I4@ INDI\n1 NAME Juno /Sol/\n1 FAMC @F2@\n0 @F2@ FAM\n1 WIFE @I3@\n1 CHIL @I4@\n0 TRLR\n";
         let tree = Tree::parse(ged).unwrap();
+        let _l = crate::locale_lock();
         i18n::set_locale("es");
         assert_eq!(subtitle(&tree, "I1", Sex::Female), "I1 · hija de Luis Ruiz");
         assert_eq!(subtitle(&tree, "I3", Sex::Unknown), "I3");

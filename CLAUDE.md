@@ -8,7 +8,9 @@ Read `docs/DESIGN.md` before touching UI.
 crates/i18n     gen-i18n: embedded translation catalogs, t!/tn!/tv! macros, locale switching, i18n guard tests
 crates/gedcom   gen-gedcom: lossless GEDCOM parser/writer, tree model, edits, search — no UI
 crates/mcp      gen-mcp: `genealogy-rs mcp` — stdio MCP server over one tree file (read tools; with
-                `--propose <dir>` also propose_* tools that only drop proposals in that folder)
+                `--propose <dir>` also propose_* tools that only drop proposals in that folder);
+                query.rs: typed person filters + name matching shared by the tools, stats.rs:
+                name_stats / tree_stats / place_stats, tools.rs: the rest
 crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component); otherwise.rs: otherwise-link
                 logic (links, entity cards, registry push, Today events; tested), shared.rs: the
                 window's side of it (link pump, publish after load/save, Vigía action);
@@ -56,7 +58,9 @@ crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component); otherwise.rs
   when `rev` changes, removed on quit) and, outside "Solo lectura", `propose_*` tools validate a
   `genmcp::proposal::Proposal` and drop it in `…/proposals/`; the window polls that folder and
   shows cards; Aplicar is one `GenApp::edit` (⌘Z). New tools go in `gen-mcp` with a test on
-  synthetic fixtures. The privacy note (`app.agent.privacy_*`) must keep saying that family
+  synthetic fixtures (`crates/mcp/tests/fixtures`). Prefer one aggregate tool with typed filters
+  over a lookup the model has to repeat; tool replies stay compact (caps, `offset` / `next_offset`,
+  totals) and unknown arguments are refused. The privacy note (`app.agent.privacy_*`) must keep saying that family
   data the assistant reads goes to the chosen provider with the user's account.
 - Comments: sparse, only non-obvious why.
 - Disk-heavy GPUI build: `cargo build -p gen-app` (dev profile has no debuginfo on purpose).
