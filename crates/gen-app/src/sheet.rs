@@ -112,7 +112,7 @@ impl GenApp {
             .child(avatar(t, Some(p), size::AVATAR_SHEET.into()))
             .child(div().font_family(SERIF).font_weight(FontWeight::SEMIBOLD).text_size(px(24.)).line_height(px(30.)).text_center().child(p.name()))
             .child(div().text_size(px(13.)).text_color(t.ink_muted).child(life))
-            .child(div().flex().gap(px(6.)).child(chip(sbg, sfg, sex)).child(chip(t.canvas, t.ink_muted, p.id.clone())))
+            .child(div().flex().gap(px(6.)).child(chip(sex, sfg, sbg)).child(chip(p.id.clone(), t.ink_muted, t.canvas)))
             .children(self.review_hint(t, &p.id, cx))
             .child(
                 div()

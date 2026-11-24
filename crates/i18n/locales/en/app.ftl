@@ -1,12 +1,12 @@
 # Main window: top bar, tree canvas, ficha, list, notices.
 app.cli.usage = usage: genealogy-rs [FILE.ged]\n\nExplore and edit GEDCOM family trees.
 app.menu.quit = Quit gen
-app.credit = Developed by {company} · Wyoming, USA
+app.credit = Made by {company} · Wyoming, USA
 app.about.menu = About {app}
-app.about.footer = {app} {version} · {company} · About
-app.about.version = Version {version}
+app.about.footer_link = About
+app.privacy.local = Your data stays on this computer
 app.about.description = Explore and edit GEDCOM family trees on your computer: tree, fan chart, map of places, relationships and data review. Your files never leave your machine.
-app.about.developed_by = Developed by {company}
+app.about.developed_by = Made by {company}
 app.about.location = Wyoming, USA
 app.about.website = Visit {site}
 app.about.source = Source code on GitHub

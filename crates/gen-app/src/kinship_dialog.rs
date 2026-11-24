@@ -187,7 +187,7 @@ impl Render for KinshipDialog {
                     .id("kin-backdrop")
                     .absolute()
                     .inset_0()
-                    .bg(t.backdrop())
+                    .bg(t.backdrop)
                     .occlude()
                     .on_mouse_down(MouseButton::Left, cx.listener(|_, _, _, cx| cx.emit(KinshipDialogEvent::Close))),
             )

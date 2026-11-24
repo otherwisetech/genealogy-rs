@@ -1,12 +1,12 @@
 # Main window: top bar, tree canvas, ficha, list, notices.
 app.cli.usage = usage : genealogy-rs [FICHIER.ged]\n\nExplorez et modifiez des arbres généalogiques GEDCOM.
 app.menu.quit = Quitter gen
-app.credit = Développé par {company} · Wyoming, États-Unis
+app.credit = Réalisé par {company} · Wyoming, États-Unis
 app.about.menu = À propos de {app}
-app.about.footer = {app} {version} · {company} · À propos
-app.about.version = Version {version}
+app.about.footer_link = À propos
+app.privacy.local = Vos données restent sur cet ordinateur
 app.about.description = Explorez et modifiez des arbres généalogiques GEDCOM sur votre ordinateur : arbre, éventail, carte des lieux, liens de parenté et révision des données. Vos fichiers ne quittent jamais votre machine.
-app.about.developed_by = Développé par {company}
+app.about.developed_by = Réalisé par {company}
 app.about.location = Wyoming, États-Unis
 app.about.website = Visiter {site}
 app.about.source = Code source sur GitHub

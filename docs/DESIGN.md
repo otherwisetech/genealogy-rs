@@ -16,6 +16,13 @@ Spanish (as in the mockup); keep all user-facing strings in Spanish.
 
 ## Tokens (`crates/gen-app/src/theme.rs`)
 
+The family's tokens and chrome come from [otherwise-ui](https://github.com/otherwisetech/otherwise-ui)
+(by tag): Inter, the type scale, the warm neutrals (canvas #F2F1EE, dark surface #1C1B1A), status
+colours, buttons (32 tall, radius 9), the 56 px top bar (`AppHeader`), the 28 px footer
+(`AppFooter`) and About (`AboutModal`). genealogy only picks its forest-green accent
+(`accents::GENEALOGY`). The table below keeps the tree's own content colours; where it differs from
+otherwise-ui (canvas, warning, controls 36), otherwise-ui wins.
+
 | token | light | notes |
 |---|---|---|
 | canvas | #EFEDE8 | canvas background |
@@ -41,20 +48,20 @@ over surface.
 ## Typography
 
 - Fraunces 600 24 — name in the ficha
-- Fraunces 600 16 — tree name in the top bar
 - Inter 600 13 — name in a card (max 2 lines)
 - Inter 500 13 — buttons and rows
 - Inter 400 12 — years, places, labels
 
-Serif only for featured names; everything else Inter. Fonts are bundled (OFL) under
-`crates/gen-app/assets/fonts/`.
+Serif only for featured names in the content; the chrome (top bar, footer, About) is Inter like
+every Otherwise app. Fraunces is bundled (OFL) under `crates/gen-app/assets/fonts/`; Inter comes
+embedded in otherwise-ui.
 
 ## Measures
 
 - Card 220×64, radius 14, padding 12. Focus card 220×88, 2 px accent border + 4 px halo.
 - Avatar 36 (card) · 80 (ficha) · 30 (rows).
 - Generation step 260 (220 + 40 gap). Minimum vertical gap 24.
-- Ficha panel 360 wide, padding 24. Top bar 56 tall, controls 36.
+- Ficha panel 360 wide, padding 24. Top bar 56 tall, controls 32 (otherwise-ui).
 
 ## Person card states
 
@@ -115,7 +122,7 @@ focus's left edge. Without children it shows one dashed «+ Añadir hijo» slot.
 chips «Mujer» (sex tint) and the id «I500125» · buttons «✎ Editar» (ink filled), «Añadir pariente»
 (outline, opens a menu Padre/Madre/Pareja/Hijo/Hija), «…» (more: Ver GEDCOM, Unir con otra persona…,
 Eliminar). The three
-share one row: 36 tall, radius 10, Inter 500 13, gap 8, centres aligned; the two menu triggers are
+share one row: 32 tall, radius 9, Inter 500 13, gap 8, centres aligned; the two menu triggers are
 the app's own outline buttons (`ui::menu_button` / `ui::menu_icon_button`, border token, surface
 background, 14 px chevron), not gpui-component's `Button`.
 Completeness box: «Ficha completa al 40 %» + «Completar» link (opens the dialog), accent progress

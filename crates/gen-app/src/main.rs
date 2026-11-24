@@ -43,10 +43,10 @@ use std::path::PathBuf;
 actions!(genealogy, [Quit, OpenDeveloperSite, ShowAbout, OpenVcity]);
 
 pub(crate) const APP_NAME: &str = "genealogy-rs"; // i18n-ok: product name
-pub(crate) const DEVELOPER: &str = "Otherwise Technologies LLC"; // i18n-ok: company name
-pub(crate) const DEVELOPER_URL: &str = "https://otherwisetech.com";
+pub(crate) const DEVELOPER: &str = otherwise_ui::COMPANY;
+pub(crate) const DEVELOPER_URL: &str = otherwise_ui::COMPANY_URL;
 
-/// «Developed by Otherwise Technologies LLC · Wyoming, USA» in the current language.
+/// «Made by Otherwise Technologies LLC · Wyoming, USA» in the current language.
 pub(crate) fn developer_credit() -> String {
     i18n::t!("app.credit", company = DEVELOPER)
 }
@@ -108,12 +108,8 @@ fn set_dock_icon() {
     }
 }
 
-const FONTS: [&[u8]; 4] = [
-    include_bytes!("../assets/fonts/Inter-Regular.ttf"),
-    include_bytes!("../assets/fonts/Inter-Medium.ttf"),
-    include_bytes!("../assets/fonts/Inter-SemiBold.ttf"),
-    include_bytes!("../assets/fonts/Fraunces72pt-SemiBold.ttf"),
-];
+/// The serif for person names in the content; Inter comes embedded in otherwise-ui.
+const FONTS: [&[u8]; 1] = [include_bytes!("../assets/fonts/Fraunces72pt-SemiBold.ttf")];
 
 fn main() {
     // the AI panel starts this binary as the tree's MCP server: no window, no migration
@@ -153,6 +149,7 @@ fn main() {
         #[cfg(target_os = "macos")]
         set_dock_icon();
         gpui_component::init(cx);
+        otherwise_ui::init(otherwise_ui::accents::GENEALOGY, cx);
         otherwise_agent_panel::ui::init(cx);
         agent::apply_labels();
         app::sync_theme(None, cx);

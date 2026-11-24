@@ -75,7 +75,7 @@ impl MergeDialog {
             .border_1()
             .when(kept, |d| d.border_2().border_color(t.accent))
             .when(!kept, |d| d.border_color(t.border).border_dashed())
-            .child(h_flex().justify_between().child(ui::chip(badge_bg, badge_fg, badge)).child(ui::chip(t.canvas, t.ink_muted, id.to_string())))
+            .child(h_flex().justify_between().child(ui::chip(badge, badge_fg, badge_bg)).child(ui::chip(id.to_string(), t.ink_muted, t.canvas)))
             .child(
                 v_flex()
                     .items_center()
@@ -148,7 +148,7 @@ impl Render for MergeDialog {
                     .id("merge-backdrop")
                     .absolute()
                     .inset_0()
-                    .bg(t.backdrop())
+                    .bg(t.backdrop)
                     .occlude()
                     .on_mouse_down(MouseButton::Left, cx.listener(|_, _, _, cx| cx.emit(MergeDialogEvent::Cancel))),
             )

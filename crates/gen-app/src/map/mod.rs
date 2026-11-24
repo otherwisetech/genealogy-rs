@@ -784,7 +784,7 @@ impl GenApp {
                         .border_1()
                         .border_color(t.border)
                         .shadow(vec![BoxShadow { color: hsla(0., 0., 0., 0.08), offset: point(px(0.), px(2.)), blur_radius: px(10.), spread_radius: px(0.), inset: false }])
-                        .child(icon(if self.map.net_error { IconName::TriangleAlert } else { IconName::Map }, 16., if self.map.net_error { t.warning } else { t.accent }))
+                        .child(icon(if self.map.net_error { IconName::TriangleAlert } else { IconName::Map }, 16., if self.map.net_error { t.warn } else { t.accent }))
                         .child(div().flex_1().min_w_0().text_size(px(13.)).text_color(t.ink).child(text))
                         .when_some(secondary, |d, s| {
                             d.child(ui::outline_button(t, "map-decline").h(px(32.)).child(s).on_click(cx.listener(|this, _, _, cx| {
