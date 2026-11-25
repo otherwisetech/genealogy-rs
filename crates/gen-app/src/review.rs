@@ -126,7 +126,7 @@ impl EventEmitter<ReviewEvent> for ReviewPanel {}
 pub(crate) fn severity_icon(t: &Tokens, s: Severity) -> (IconName, Hsla) {
     match s {
         Severity::Error => (IconName::CircleX, t.danger),
-        Severity::Warning => (IconName::TriangleAlert, t.warning),
+        Severity::Warning => (IconName::TriangleAlert, t.warn),
         Severity::Info => (IconName::Info, t.ink_muted),
     }
 }
@@ -576,7 +576,7 @@ impl GenApp {
                 .flex()
                 .items_center()
                 .justify_center()
-                .bg(if errors { t.danger } else { t.warning })
+                .bg(if errors { t.danger } else { t.warn })
                 .text_color(t.on_fill())
                 .text_size(px(10.))
                 .font_weight(FontWeight::SEMIBOLD)

@@ -1,5 +1,5 @@
 //! otherwise-link: `otherwise-genealogy://` links in, other Otherwise apps in About, people
-//! shared with the entity registry (opt-in), birthdays and anniversaries in Otherwise Apps'
+//! shared with the entity registry (opt-in), birthdays and anniversaries in Otherwise Hub's
 //! Today view, and "Track a document in Vigía".
 //!
 //! What a shared card carries: the name (given / family), and exact birth / death dates. Never
@@ -331,7 +331,7 @@ pub fn upcoming(tree: &Tree, file: Option<&Path>, key: &str, today: NaiveDate, s
     out
 }
 
-/// The same people for Otherwise Apps' Calendar (`<data root>/genealogy/events.json`): one
+/// The same people for Otherwise Hub's Calendar (`<data root>/genealogy/events.json`): one
 /// yearly event per living person's exact birthday and per living couple's wedding day. Names
 /// only, never notes, places or sources. 29 Feb birthdays fall on the last day of February.
 pub fn calendar(tree: &Tree, file: Option<&Path>, key: &str, today: NaiveDate, state: &SyncState) -> Vec<otherwise_link::events::Event> {

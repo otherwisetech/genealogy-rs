@@ -104,7 +104,7 @@ layer Otherwise Technologies' apps share. Everything stays on your computer; bot
 the globe (preferences) menu.
 
 - **Share people** (off by default). When it is on *and* the shared entity registry is turned on in
-  [Otherwise Apps](https://github.com/otherwisetech/otherwise-apps), every person of the open tree
+  [Otherwise Hub](https://github.com/otherwisetech/otherwise-apps), every person of the open tree
   becomes a *person* card other apps can use (mosaico tags photos with them, Vigía tracks their
   documents). A card carries the name (given / family) and the **exact** birth and death dates;
   notes, places, sources and everything else stay in your file. People are pushed when a tree is
@@ -112,16 +112,16 @@ the globe (preferences) menu.
   id there comes from the record's `_UID` / `UID` when it has one, else from the file's path and
   the record's xref.
 - **Calendar** (same switch as Today): the same people as yearly events in
-  `<data folder>/genealogy/events.json` for Otherwise Apps' Calendar (otherwise-link SPEC §9):
+  `<data folder>/genealogy/events.json` for Otherwise Hub's Calendar (otherwise-link SPEC §9):
   names and dates only, each opening the person (`otherwise://genealogy/person?file=…&id=…`).
 - **Today** (on by default): birthdays of living people and wedding anniversaries of living couples
-  in the next 14 days, from exact dates, appear in Otherwise Apps' *Today* view and open the
+  in the next 14 days, from exact dates, appear in Otherwise Hub's *Today* view and open the
   person here. The feed is `today/genealogy.json` in the shared Otherwise folder.
 - **Track a document in Vigía…** in a person's ⋯ menu (shown when Vigía is installed) shares that
   person and opens Vigía's new-item form with them as the owner
   (`otherwise://vigia/new?owner=<entity>&template=passport`).
 - **Links.** genealogy-rs opens `otherwise-genealogy://` links (also `otherwise://genealogy/…`
-  through Otherwise Apps):
+  through Otherwise Hub):
 
   | Link | Does |
   |------|------|
@@ -140,7 +140,7 @@ the globe (preferences) menu.
 
 - **Your trees** stay wherever you save them. A new tree is offered the folder you used last, else
   the Otherwise data folder (`~/.otherwise/genealogy/`, or wherever you moved the data root in
-  Otherwise Apps); never a temp folder. **Import / export** has *Move to…* (verified copy, the
+  Otherwise Hub); never a temp folder. **Import / export** has *Move to…* (verified copy, the
   original deleted only afterwards), *Show in Finder* and your **recent trees**; a tree that moved
   shows *Locate…* / *Remove from list*. The native **File** menu has the same.
 - **Cloud folders** (OneDrive, Dropbox, iCloud Drive, Google Drive): an open tree is marked with a

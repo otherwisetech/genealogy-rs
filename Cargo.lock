@@ -2159,7 +2159,7 @@ dependencies = [
 
 [[package]]
 name = "gen-app"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2173,6 +2173,7 @@ dependencies = [
  "objc",
  "otherwise-agent-panel",
  "otherwise-link 0.3.0",
+ "otherwise-ui",
  "serde",
  "serde_json",
  "tempfile",
@@ -2183,7 +2184,7 @@ dependencies = [
 
 [[package]]
 name = "gen-gedcom"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "gen-i18n",
  "thiserror 2.0.20",
@@ -2191,11 +2192,11 @@ dependencies = [
 
 [[package]]
 name = "gen-i18n"
-version = "0.8.1"
+version = "0.8.2"
 
 [[package]]
 name = "gen-mcp"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "gen-gedcom",
  "gen-i18n",
@@ -4754,6 +4755,15 @@ dependencies = [
  "serde",
  "serde_json",
  "uuid",
+]
+
+[[package]]
+name = "otherwise-ui"
+version = "0.1.2"
+source = "git+https://github.com/otherwisetech/otherwise-ui?tag=v0.1.2#98915b07b17addb3ba945fc35d85a66eb43a7364"
+dependencies = [
+ "gpui",
+ "gpui-component",
 ]
 
 [[package]]

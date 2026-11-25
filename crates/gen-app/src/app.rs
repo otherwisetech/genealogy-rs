@@ -8,7 +8,6 @@ use crate::theme::{self, SANS, tokens};
 use gedcom::{EditError, ImportReport, Sex, Tree};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::Theme;
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -183,7 +182,7 @@ pub struct GenApp {
     overlay_subs: Vec<Subscription>,
     /// push people to the shared entity registry (opt-in)
     pub(crate) share_people: bool,
-    /// birthdays and anniversaries in Otherwise Apps' Today
+    /// birthdays and anniversaries in Otherwise Hub's Today
     pub(crate) today_on: bool,
     /// Vigía is installed: offer "Track a document in Vigía"
     pub(crate) vigia_installed: bool,
@@ -200,8 +199,7 @@ pub struct GenApp {
 }
 
 pub(crate) fn sync_theme(window: Option<&mut Window>, cx: &mut App) {
-    Theme::sync_system_appearance(window, cx);
-    Theme::global_mut(cx).font_family = SANS.into();
+    theme::apply(window, cx);
 }
 
 impl GenApp {
@@ -1339,7 +1337,7 @@ impl GenApp {
             .flex()
             .items_center()
             .justify_center()
-            .bg(t.backdrop())
+            .bg(t.backdrop)
             .occlude()
             .on_click(cx.listener(|this, _, window, cx| this.close_raw(window, cx)))
             .child(

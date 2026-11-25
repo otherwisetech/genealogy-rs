@@ -16,7 +16,7 @@ pub struct Settings {
     pub update_found: Option<(String, String)>,
     /// push people to the shared Otherwise entity registry (also needs the registry turned on)
     pub share_people: bool,
-    /// birthdays and anniversaries in Otherwise Apps' Today
+    /// birthdays and anniversaries in Otherwise Hub's Today
     pub today: bool,
 }
 

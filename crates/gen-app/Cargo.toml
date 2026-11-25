@@ -24,6 +24,7 @@ ureq = { version = "3", default-features = false, features = ["rustls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 otherwise-link.workspace = true
+otherwise-ui.workspace = true
 # the shared AI panel (⌘J) and the tree's MCP server it starts for a session
 otherwise-agent-panel = { git = "https://github.com/otherwisetech/otherwise-agent-panel", tag = "v0.2.0" }
 genmcp.workspace = true

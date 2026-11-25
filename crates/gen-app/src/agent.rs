@@ -240,7 +240,7 @@ fn write_snapshot(live: &Path, tree: &gedcom::Tree) -> std::io::Result<()> {
 
 /// The panel in the app's colours.
 pub fn style(t: &Tokens) -> PanelStyle {
-    let mut note_soft = t.warning;
+    let mut note_soft = t.warn;
     note_soft.a = 0.14;
     let mut danger_soft = t.danger;
     danger_soft.a = 0.12;
@@ -256,11 +256,11 @@ pub fn style(t: &Tokens) -> PanelStyle {
         danger: t.danger,
         danger_soft,
         ok: t.accent,
-        note: t.warning,
+        note: t.warn,
         note_soft,
         terminal_bg: if t.dark { rgb(0x161514).into() } else { rgb(0xFFFFFF).into() },
         terminal_fg: t.ink,
-        mono_font: "Menlo".into(), // i18n-ok: font name
+        mono_font: otherwise_ui::tokens::MONO.into(),
         dark: t.dark,
     }
 }
