@@ -19,7 +19,7 @@ thiserror = "2"
 # deep links, app discovery, the shared entity registry and the Today feed of Otherwise apps
 otherwise-link = { git = "https://github.com/otherwisetech/otherwise-link", tag = "v0.3.0" }
 # the family design system: tokens (Inter, type scale, colours) and the shared chrome (MIT/Apache)
-otherwise-ui = { git = "https://github.com/otherwisetech/otherwise-ui", tag = "v0.1.1" }
+otherwise-ui = { git = "https://github.com/otherwisetech/otherwise-ui", tag = "v0.1.2" }
 # GPUI stack, same as the upstream gpui-component examples. Git deps move: Cargo.lock pins revs.
 gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["font-kit"] }

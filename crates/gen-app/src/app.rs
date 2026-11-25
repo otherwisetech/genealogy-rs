@@ -182,7 +182,7 @@ pub struct GenApp {
     overlay_subs: Vec<Subscription>,
     /// push people to the shared entity registry (opt-in)
     pub(crate) share_people: bool,
-    /// birthdays and anniversaries in Otherwise Apps' Today
+    /// birthdays and anniversaries in Otherwise Hub's Today
     pub(crate) today_on: bool,
     /// Vigía is installed: offer "Track a document in Vigía"
     pub(crate) vigia_installed: bool,

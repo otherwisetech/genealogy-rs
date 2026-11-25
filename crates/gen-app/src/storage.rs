@@ -2,7 +2,7 @@
 //!
 //! The app's settings, sync state, caches and recent-files list live in the Otherwise data
 //! folder, `<data root>/genealogy/` (`~/.otherwise/genealogy/` unless the user moved the root in
-//! Otherwise Apps). Before 0.5 they were in the platform config folder ([`legacy_dir`]);
+//! Otherwise Hub). Before 0.5 they were in the platform config folder ([`legacy_dir`]);
 //! [`migrate`] moves them over once, never overwriting anything.
 //!
 //! Family trees stay wherever the user saves them. New trees are offered the last folder used,
