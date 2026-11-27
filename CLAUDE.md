@@ -65,6 +65,12 @@ crates/gen-app  `genealogy-rs` desktop app (GPUI + gpui-component); otherwise.rs
 - Comments: sparse, only non-obvious why.
 - Disk-heavy GPUI build: `cargo build -p gen-app` (dev profile has no debuginfo on purpose).
 
+## Release
+
+Releases stay in this repo (`gh release create vX.Y.Z` with each file and its `.sha256`).
+Notes, file names and issue forms follow the family's release rules: otherwisetech/otherwise-apps
+`docs/releases.md` (how the Hub discovers and verifies releases).
+
 ## Validate
 
 ```
